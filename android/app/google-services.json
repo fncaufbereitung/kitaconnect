@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "562865729062",
+    "project_id": "kitaconnectapp",
+    "storage_bucket": "kitaconnectapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:562865729062:android:4cb917697b8f983544c0e7",
+        "android_client_info": {
+          "package_name": "com.example.kitaconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKB9QsDFVcPW4fcRO7g49xCKJSMeWSwHo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
