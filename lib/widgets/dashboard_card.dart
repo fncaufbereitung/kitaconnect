@@ -33,7 +33,7 @@ class _DashboardCardState extends State<DashboardCard> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         elevation: isPressed ? 2 : 7,
-        shadowColor: widget.color.withOpacity(0.28),
+        shadowColor: widget.color.withValues(alpha: 0.28),
         child: InkWell(
           borderRadius: BorderRadius.circular(28),
           onTapDown: (_) {
@@ -60,7 +60,7 @@ class _DashboardCardState extends State<DashboardCard> {
               gradient: LinearGradient(
                 colors: [
                   Colors.white,
-                  widget.color.withOpacity(isPressed ? 0.16 : 0.08),
+                  widget.color.withValues(alpha: isPressed ? 0.16 : 0.08),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -74,7 +74,7 @@ class _DashboardCardState extends State<DashboardCard> {
                   width: isPressed ? 50 : 54,
                   height: isPressed ? 50 : 54,
                   decoration: BoxDecoration(
-                    color: widget.color.withOpacity(0.16),
+                    color: widget.color.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(widget.icon, color: widget.color, size: 30),
@@ -109,3 +109,4 @@ class _DashboardCardState extends State<DashboardCard> {
     );
   }
 }
+

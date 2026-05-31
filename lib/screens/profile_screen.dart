@@ -98,7 +98,7 @@ class ProfileScreen extends StatelessWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.22),
+                          color: Colors.white.withValues(alpha: 0.22),
                           borderRadius: BorderRadius.circular(30),
                         ),
                         child: Text(
@@ -167,6 +167,7 @@ class ProfileScreen extends StatelessWidget {
                   color: Colors.red,
                   onTap: () async {
                     await FirebaseAuth.instance.signOut();
+                    if (!context.mounted) return;
                     Navigator.pop(context);
                   },
                 ),
@@ -178,3 +179,4 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 }
+

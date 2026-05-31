@@ -313,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
               width: 90,
               height: 90,
               decoration: BoxDecoration(
-                color: const Color(0xFF2563EB).withOpacity(0.12),
+                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(28),
               ),
               child: const Icon(
@@ -448,7 +448,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               width: 90,
               height: 90,
               decoration: BoxDecoration(
-                color: const Color(0xFF2563EB).withOpacity(0.12),
+                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(28),
               ),
               child: const Icon(
@@ -660,7 +660,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blue.withOpacity(0.20),
+                              color: Colors.blue.withValues(alpha: 0.20),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -676,7 +676,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.20),
+                                      color: Colors.white.withValues(alpha: 0.20),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: const Icon(
@@ -887,5 +887,6 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 }
 
   
+
 
 

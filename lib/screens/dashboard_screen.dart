@@ -110,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFF8B5CF6).withOpacity(0.30),
+                    color: Color(0xFF8B5CF6).withValues(alpha: 0.30),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   ),
@@ -314,7 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.10),
+              color: Colors.black.withValues(alpha: 0.10),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -383,3 +383,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
+

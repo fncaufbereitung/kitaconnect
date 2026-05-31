@@ -24,7 +24,7 @@ class ProfileOptionTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         elevation: 3,
-        shadowColor: Colors.black.withOpacity(0.08),
+        shadowColor: Colors.black.withValues(alpha: 0.08),
         child: InkWell(
           borderRadius: BorderRadius.circular(22),
           onTap: onTap,
@@ -36,7 +36,7 @@ class ProfileOptionTile extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(icon, color: color),
@@ -77,3 +77,4 @@ class ProfileOptionTile extends StatelessWidget {
     );
   }
 }
+
