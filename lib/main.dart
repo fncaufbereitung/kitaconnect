@@ -782,6 +782,7 @@ Future<void> checkUserRole() async {
                   },
                 ),
 
+                if (isTeacherOrAdmin)
                 DashboardCard(
                   title: 'Admin',
                   subtitle: 'Verwaltung',
@@ -877,7 +878,7 @@ class UserProfileScreen extends StatelessWidget {
 
   String getRoleText(String role) {
     if (role == 'admin') return 'Administrator';
-    if (role == 'educator') return 'Erzieher/in';
+    if (role == 'teacher') return 'Erzieher/in';
     return 'Elternteil';
   }
 
