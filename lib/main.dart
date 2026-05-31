@@ -4,13 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'firebase_options.dart';
-import 'screens/admin_screen.dart';
-import 'screens/child_profile_screen.dart';
-import 'screens/events_screen.dart';
-import 'screens/menu_screen.dart';
-import 'screens/messages_screen.dart';
-import 'screens/photos_screen.dart';
-import 'screens/profile_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,38 +67,6 @@ class DailyReport {
     );
   }
 }
-Route createPremiumRoute(Widget page) {
-  return PageRouteBuilder(
-    transitionDuration: const Duration(milliseconds: 350),
-    reverseTransitionDuration: const Duration(milliseconds: 250),
-    pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final slideAnimation = Tween<Offset>(
-        begin: const Offset(0.08, 0.04),
-        end: Offset.zero,
-      ).animate(
-        CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        ),
-      );
-
-      final fadeAnimation = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOut,
-      );
-
-      return FadeTransition(
-        opacity: fadeAnimation,
-        child: SlideTransition(
-          position: slideAnimation,
-          child: child,
-        ),
-      );
-    },
-  );
-}
-
 class KitaConnectApp extends StatelessWidget {
   const KitaConnectApp({super.key});
 
@@ -163,7 +125,10 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return DashboardScreen();
+          return DashboardScreen(
+            loadCurrentUserData: getCurrentUserData,
+            dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+          );
         }
 
         return const WelcomeScreen();
@@ -307,7 +272,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => DashboardScreen()),
+          MaterialPageRoute(
+            builder: (_) => DashboardScreen(
+              loadCurrentUserData: getCurrentUserData,
+              dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+            ),
+          ),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -436,7 +406,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => DashboardScreen()),
+          MaterialPageRoute(
+            builder: (_) => DashboardScreen(
+              loadCurrentUserData: getCurrentUserData,
+              dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+            ),
+          ),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -536,348 +511,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
-
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  int selectedIndex = 0;
-  bool isTeacherOrAdmin = false;
-  
-@override
-void initState() {
-  super.initState();
-  checkUserRole();
-}
-
-Future<void> checkUserRole() async {
-  final data = await getCurrentUserData();
-  final role = data?['role'] ?? 'parent';
-
-  setState(() {
-    isTeacherOrAdmin = role == 'teacher' || role == 'admin';
-  });
-}
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF7ED),
-
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'KitaConnect',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.logout,
-              color: Colors.black,
-            ),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-          ),
-        ],
-      ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(34),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF38BDF8),
-                    Color(0xFF8B5CF6),
-                    Color(0xFFF472B6),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFF8B5CF6).withOpacity(0.30),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  const Positioned(
-                    right: -20,
-                    top: -20,
-                    child: Icon(
-                      Icons.favorite,
-                      size: 120,
-                      color: Colors.white24,
-                    ),
-                  ),
-                  const Positioned(
-                    right: 20,
-                    bottom: -10,
-                    child: Icon(
-                      Icons.child_care,
-                      size: 90,
-                      color: Colors.white24,
-                    ),
-                  ),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Willkommen zurück!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        'Alles Wichtige aus der Kita an einem Ort.',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          height: 1.4,
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Icon(Icons.auto_awesome, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            'Premium KitaConnect',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 26),
-
-            const Text(
-              'Dashboard',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF111827),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 18,
-              mainAxisSpacing: 18,
-              children: [
-                DashboardCard(
-                  title: 'Fotos',
-                  subtitle: 'Schöne Momente',
-                  icon: Icons.photo,
-                  color: Colors.orange,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      createPremiumRoute(const PhotosScreen()),
-                    );
-                  },
-                ),
-                DashboardCard(
-  title: 'Wochenmenü',
-  subtitle: 'Essensplan',
-  icon: Icons.restaurant_menu,
-  color: Colors.green,
-  onTap: () {
-    Navigator.push(
-      context,
-      createPremiumRoute(const MenuScreen()),
-    );
-  },
-),
-
-                DashboardCard(
-                  title: 'Nachrichten',
-                  subtitle: 'Kommunikation',
-                  icon: Icons.message,
-                  color: Colors.blue,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      createPremiumRoute(const MessagesScreen()),
-                    );
-                  },
-                ),
-  if (isTeacherOrAdmin)              
-    DashboardCard(
-    title: 'Admin-Bereich',
-    subtitle: 'Für Erzieherinnen',
-    icon: Icons.admin_panel_settings,
-    color: Colors.purple,
-    onTap: () {
-      Navigator.push(
-        context,
-        createPremiumRoute(const AdminScreen()),
-      );
-    },
-  ),
-
-                DashboardCard(
-                  title: 'Events',
-                  subtitle: 'Termine',
-                  icon: Icons.event,
-                  color: Colors.green,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      createPremiumRoute(const EventsScreen()),
-                    );
-                  },
-                ),
-
-                DashboardCard(
-                  title: 'Tagesbericht',
-                  subtitle: 'Essen, Schlafen, Aktivität',
-                  icon: Icons.assignment,
-                  color: Colors.pink,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      createPremiumRoute(const DailyReportScreen()),
-                    );
-                  },
-                ),
-
-                DashboardCard(
-                  title: 'Mein Kind',
-                  subtitle: 'Profil & Infos',
-                  icon: Icons.child_care,
-                  color: Colors.purple,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      createPremiumRoute(const ChildProfileScreen()),
-                    );
-                  },
-                ),
-
-                if (isTeacherOrAdmin)
-                DashboardCard(
-                  title: 'Admin',
-                  subtitle: 'Verwaltung',
-                  icon: Icons.admin_panel_settings,
-                  color: Colors.deepPurple,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      createPremiumRoute(const AdminScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.10),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BottomNavigationBar(
-            currentIndex: selectedIndex,
-            backgroundColor: Colors.white,
-            selectedItemColor: const Color(0xFF7C3AED),
-            unselectedItemColor: Colors.grey,
-            type: BottomNavigationBarType.fixed,
-            elevation: 0,
-            onTap: (index) {
-              setState(() {
-                selectedIndex = index;
-              });
-
-              if (index == 1) {
-                Navigator.push(
-                  context,
-                  createPremiumRoute(const PhotosScreen()),
-                );
-              }
-
-              if (index == 2) {
-                Navigator.push(
-                  context,
-                  createPremiumRoute(const MessagesScreen()),
-                );
-              }
-
-              if (index == 3) {
-                Navigator.push(
-                  context,
-                  createPremiumRoute(ProfileScreen(loadCurrentUserData: getCurrentUserData)),
-                );
-              }
-            },
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_rounded),
-                label: 'Start',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.photo_rounded),
-                label: 'Fotos',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.chat_bubble_rounded),
-                label: 'Nachrichten',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_rounded),
-                label: 'Profil',
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 class DashboardGrid extends StatelessWidget {
   final List<Widget> children;
 
@@ -893,120 +526,6 @@ class DashboardGrid extends StatelessWidget {
       crossAxisSpacing: 18,
       mainAxisSpacing: 18,
       children: children,
-    );
-  }
-}
-
-class DashboardCard extends StatefulWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const DashboardCard({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  State<DashboardCard> createState() => _DashboardCardState();
-}
-
-class _DashboardCardState extends State<DashboardCard> {
-  bool isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: isPressed ? 0.95 : 1.0,
-      duration: const Duration(milliseconds: 120),
-      curve: Curves.easeOut,
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        elevation: isPressed ? 2 : 7,
-        shadowColor: widget.color.withOpacity(0.28),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(28),
-          onTapDown: (_) {
-            setState(() {
-              isPressed = true;
-            });
-          },
-          onTapCancel: () {
-            setState(() {
-              isPressed = false;
-            });
-          },
-          onTapUp: (_) {
-            setState(() {
-              isPressed = false;
-            });
-            widget.onTap();
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white,
-                  widget.color.withOpacity(isPressed ? 0.16 : 0.08),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: isPressed ? 50 : 54,
-                  height: isPressed ? 50 : 54,
-                  decoration: BoxDecoration(
-                    color: widget.color.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    widget.icon,
-                    color: widget.color,
-                    size: 30,
-                  ),
-                ),
-
-                const Spacer(),
-
-                Text(
-                  widget.title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                Text(
-                  widget.subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1368,3 +887,5 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 }
 
   
+
+
