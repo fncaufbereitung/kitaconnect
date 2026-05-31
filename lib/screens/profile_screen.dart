@@ -174,7 +174,7 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () async {
                     await authService.signOut();
                     if (!context.mounted) return;
-                    Navigator.pop(context);
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                   },
                 ),
               ],

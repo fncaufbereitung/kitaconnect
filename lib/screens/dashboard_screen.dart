@@ -86,6 +86,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () async {
               await widget.authService.signOut();
+              if (!context.mounted) return;
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
           ),
         ],
