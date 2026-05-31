@@ -132,6 +132,7 @@ class AuthGate extends StatelessWidget {
           return DashboardScreen(
             loadCurrentUserData: getCurrentUserData,
             dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+            authGateBuilder: (_) => const AuthGate(),
             authService: authService,
           );
         }
@@ -276,6 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (_) => DashboardScreen(
               loadCurrentUserData: getCurrentUserData,
               dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+              authGateBuilder: (_) => const AuthGate(),
               authService: authService,
             ),
           ),
@@ -410,6 +412,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             builder: (_) => DashboardScreen(
               loadCurrentUserData: getCurrentUserData,
               dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+              authGateBuilder: (_) => const AuthGate(),
               authService: authService,
             ),
           ),

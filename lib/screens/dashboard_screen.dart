@@ -37,12 +37,14 @@ Route createPremiumRoute(Widget page) {
 class DashboardScreen extends StatefulWidget {
   final Future<Map<String, dynamic>?> Function() loadCurrentUserData;
   final WidgetBuilder dailyReportScreenBuilder;
+  final WidgetBuilder authGateBuilder;
   final AuthService authService;
 
   const DashboardScreen({
     super.key,
     required this.loadCurrentUserData,
     required this.dailyReportScreenBuilder,
+    required this.authGateBuilder,
     required this.authService,
   });
 
@@ -368,6 +370,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   createPremiumRoute(
                     ProfileScreen(
                       loadCurrentUserData: widget.loadCurrentUserData,
+                      authGateBuilder: widget.authGateBuilder,
                       authService: widget.authService,
                     ),
                   ),

@@ -7,11 +7,13 @@ import 'menu_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   final Future<Map<String, dynamic>?> Function() loadCurrentUserData;
+  final WidgetBuilder authGateBuilder;
   final AuthService authService;
 
   const ProfileScreen({
     super.key,
     required this.loadCurrentUserData,
+    required this.authGateBuilder,
     required this.authService,
   });
 
@@ -174,7 +176,13 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () async {
                     await authService.signOut();
                     if (!context.mounted) return;
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: authGateBuilder),
+                      (route) => false,
+                    );
                   },
                 ),
               ],
