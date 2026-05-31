@@ -1,14 +1,19 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
 import '../widgets/profile_option_tile.dart';
 import 'child_profile_screen.dart';
 import 'menu_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   final Future<Map<String, dynamic>?> Function() loadCurrentUserData;
+  final AuthService authService;
 
-  const ProfileScreen({super.key, required this.loadCurrentUserData});
+  const ProfileScreen({
+    super.key,
+    required this.loadCurrentUserData,
+    required this.authService,
+  });
 
   String getRoleText(String role) {
     if (role == 'admin') return 'Administrator';
@@ -138,7 +143,8 @@ class ProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const ChildProfileScreen(),
+                        builder: (_) =>
+                            ChildProfileScreen(authService: authService),
                       ),
                     );
                   },
@@ -166,7 +172,7 @@ class ProfileScreen extends StatelessWidget {
                   subtitle: 'Vom Konto abmelden',
                   color: Colors.red,
                   onTap: () async {
-                    await FirebaseAuth.instance.signOut();
+                    await authService.signOut();
                     if (!context.mounted) return;
                     Navigator.pop(context);
                   },
@@ -179,4 +185,3 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 }
-

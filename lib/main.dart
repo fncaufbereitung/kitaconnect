@@ -5,18 +5,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'firebase_options.dart';
 import 'screens/dashboard_screen.dart';
+import 'services/auth_service.dart';
+
+final authService = AuthService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const KitaConnectApp());
 }
+
 Future<Map<String, dynamic>?> getCurrentUserData() async {
-  final user = FirebaseAuth.instance.currentUser;
+  final user = authService.currentUser;
 
   if (user == null) {
     return null;
@@ -33,6 +35,7 @@ Future<Map<String, dynamic>?> getCurrentUserData() async {
 
   return doc.data();
 }
+
 class DailyReport {
   final String id;
   final String childName;
@@ -67,6 +70,7 @@ class DailyReport {
     );
   }
 }
+
 class KitaConnectApp extends StatelessWidget {
   const KitaConnectApp({super.key});
 
@@ -116,7 +120,7 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: authService.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -128,6 +132,7 @@ class AuthGate extends StatelessWidget {
           return DashboardScreen(
             loadCurrentUserData: getCurrentUserData,
             dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+            authService: authService,
           );
         }
 
@@ -147,10 +152,7 @@ class WelcomeScreen extends StatelessWidget {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFFDBEAFE),
-              Color(0xFFF8FAFC),
-            ],
+            colors: [Color(0xFFDBEAFE), Color(0xFFF8FAFC)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -208,9 +210,7 @@ class WelcomeScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
                     child: const Text('Einloggen'),
@@ -264,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       setState(() => loading = true);
 
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await authService.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
@@ -276,6 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (_) => DashboardScreen(
               loadCurrentUserData: getCurrentUserData,
               dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+              authService: authService,
             ),
           ),
         );
@@ -385,8 +386,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       setState(() => loading = true);
 
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
+      final credential = await authService.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
@@ -395,13 +395,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           .collection('users')
           .doc(credential.user!.uid)
           .set({
-        'name': nameController.text.trim(),
-        'email': emailController.text.trim(),
-        'role': 'parent',
-        'kindergartenId': '',
-'groupId': '',
-        'createdAt': Timestamp.now(),
-      });
+            'name': nameController.text.trim(),
+            'email': emailController.text.trim(),
+            'role': 'parent',
+            'kindergartenId': '',
+            'groupId': '',
+            'createdAt': Timestamp.now(),
+          });
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -410,15 +410,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
             builder: (_) => DashboardScreen(
               loadCurrentUserData: getCurrentUserData,
               dailyReportScreenBuilder: (_) => const DailyReportScreen(),
+              authService: authService,
             ),
           ),
         );
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'Fehler')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message ?? 'Fehler')));
       }
     }
 
@@ -511,6 +512,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
 class DashboardGrid extends StatelessWidget {
   final List<Widget> children;
 
@@ -557,9 +559,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     contentController.clear();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ankündigung erstellt')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ankündigung erstellt')));
     }
   }
 
@@ -642,8 +644,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                   return ListView.builder(
                     itemCount: announcements.length,
                     itemBuilder: (context, index) {
-                      final data = announcements[index].data()
-                          as Map<String, dynamic>;
+                      final data =
+                          announcements[index].data() as Map<String, dynamic>;
 
                       final title = data['title'] ?? '';
                       final content = data['content'] ?? '';
@@ -676,7 +678,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.20),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.20,
+                                      ),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: const Icon(
@@ -727,6 +731,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     );
   }
 }
+
 class DailyReportScreen extends StatefulWidget {
   const DailyReportScreen({super.key});
 
@@ -760,9 +765,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     notesController.clear();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tagesbericht gespeichert')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Tagesbericht gespeichert')));
     }
   }
 
@@ -859,8 +864,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   return ListView.builder(
                     itemCount: reports.length,
                     itemBuilder: (context, index) {
-                      final data = reports[index].data()
-                          as Map<String, dynamic>;
+                      final data =
+                          reports[index].data() as Map<String, dynamic>;
 
                       return Card(
                         child: ListTile(
@@ -885,8 +890,3 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     );
   }
 }
-
-  
-
-
-

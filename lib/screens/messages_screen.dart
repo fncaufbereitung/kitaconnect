@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
+
 class MessagesScreen extends StatefulWidget {
-  const MessagesScreen({super.key});
+  final AuthService authService;
+
+  const MessagesScreen({super.key, required this.authService});
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -15,7 +18,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Future<void> sendMessage() async {
     if (messageController.text.trim().isEmpty) return;
 
-    final user = FirebaseAuth.instance.currentUser!;
+    final user = widget.authService.currentUser!;
 
     await FirebaseFirestore.instance.collection('messages').add({
       'text': messageController.text.trim(),

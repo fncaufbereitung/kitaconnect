@@ -1,6 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'admin_screen.dart';
 import 'child_profile_screen.dart';
@@ -37,11 +37,13 @@ Route createPremiumRoute(Widget page) {
 class DashboardScreen extends StatefulWidget {
   final Future<Map<String, dynamic>?> Function() loadCurrentUserData;
   final WidgetBuilder dailyReportScreenBuilder;
+  final AuthService authService;
 
   const DashboardScreen({
     super.key,
     required this.loadCurrentUserData,
     required this.dailyReportScreenBuilder,
+    required this.authService,
   });
 
   @override
@@ -83,7 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () async {
-              await FirebaseAuth.instance.signOut();
+              await widget.authService.signOut();
             },
           ),
         ],
@@ -204,7 +206,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      createPremiumRoute(const PhotosScreen()),
+                      createPremiumRoute(
+                        PhotosScreen(authService: widget.authService),
+                      ),
                     );
                   },
                 ),
@@ -229,7 +233,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      createPremiumRoute(const MessagesScreen()),
+                      createPremiumRoute(
+                        MessagesScreen(authService: widget.authService),
+                      ),
                     );
                   },
                 ),
@@ -283,7 +289,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      createPremiumRoute(const ChildProfileScreen()),
+                      createPremiumRoute(
+                        ChildProfileScreen(authService: widget.authService),
+                      ),
                     );
                   },
                 ),
@@ -337,14 +345,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (index == 1) {
                 Navigator.push(
                   context,
-                  createPremiumRoute(const PhotosScreen()),
+                  createPremiumRoute(
+                    PhotosScreen(authService: widget.authService),
+                  ),
                 );
               }
 
               if (index == 2) {
                 Navigator.push(
                   context,
-                  createPremiumRoute(const MessagesScreen()),
+                  createPremiumRoute(
+                    MessagesScreen(authService: widget.authService),
+                  ),
                 );
               }
 
@@ -354,6 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   createPremiumRoute(
                     ProfileScreen(
                       loadCurrentUserData: widget.loadCurrentUserData,
+                      authService: widget.authService,
                     ),
                   ),
                 );
@@ -383,4 +396,3 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
-

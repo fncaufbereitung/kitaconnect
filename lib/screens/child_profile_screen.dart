@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
+
 class ChildProfileScreen extends StatefulWidget {
-  const ChildProfileScreen({super.key});
+  final AuthService authService;
+
+  const ChildProfileScreen({super.key, required this.authService});
 
   @override
   State<ChildProfileScreen> createState() => _ChildProfileScreenState();
@@ -18,7 +21,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
 
   Future<void> saveChild() async {
     setState(() => loading = true);
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final uid = widget.authService.currentUser!.uid;
 
     await FirebaseFirestore.instance
         .collection('users')
@@ -42,7 +45,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
   }
 
   Future<void> loadChild() async {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final uid = widget.authService.currentUser!.uid;
 
     final doc = await FirebaseFirestore.instance
         .collection('users')

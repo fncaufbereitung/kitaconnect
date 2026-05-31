@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../services/auth_service.dart';
+
 class PhotosScreen extends StatefulWidget {
-  const PhotosScreen({super.key});
+  final AuthService authService;
+
+  const PhotosScreen({super.key, required this.authService});
 
   @override
   State<PhotosScreen> createState() => _PhotosScreenState();
@@ -26,7 +29,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
     setState(() => uploading = true);
 
     try {
-      final uid = FirebaseAuth.instance.currentUser!.uid;
+      final uid = widget.authService.currentUser!.uid;
       final fileName = DateTime.now().millisecondsSinceEpoch.toString();
 
       final storageRef = FirebaseStorage.instance
