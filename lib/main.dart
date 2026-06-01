@@ -8,6 +8,7 @@ import 'screens/dashboard_screen.dart';
 import 'services/auth_service.dart';
 
 final authService = AuthService();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +79,7 @@ class KitaConnectApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'KitaConnect',
+      navigatorKey: rootNavigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -117,27 +119,40 @@ class KitaConnectApp extends StatelessWidget {
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
+  void returnToRoot(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: authService.authStateChanges(),
+      stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+        debugPrint(
+          'AuthGate: connectionState=${snapshot.connectionState}, '
+          'hasData=${snapshot.hasData}, uid=${snapshot.data?.uid}',
+        );
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
+        returnToRoot(context);
+
         if (snapshot.hasData) {
           return DashboardScreen(
             loadCurrentUserData: getCurrentUserData,
             dailyReportScreenBuilder: (_) => const DailyReportScreen(),
-            authGateBuilder: (_) => const AuthGate(),
             authService: authService,
           );
         }
 
-        return const WelcomeScreen();
+        return const LoginScreen();
       },
     );
   }
@@ -270,19 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password: passwordController.text.trim(),
       );
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DashboardScreen(
-              loadCurrentUserData: getCurrentUserData,
-              dailyReportScreenBuilder: (_) => const DailyReportScreen(),
-              authGateBuilder: (_) => const AuthGate(),
-              authService: authService,
-            ),
-          ),
-        );
-      }
+      if (!mounted) return;
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -405,19 +408,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'createdAt': Timestamp.now(),
           });
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DashboardScreen(
-              loadCurrentUserData: getCurrentUserData,
-              dailyReportScreenBuilder: (_) => const DailyReportScreen(),
-              authGateBuilder: (_) => const AuthGate(),
-              authService: authService,
-            ),
-          ),
-        );
-      }
+      if (!mounted) return;
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

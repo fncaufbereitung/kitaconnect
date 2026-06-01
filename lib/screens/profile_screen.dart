@@ -7,13 +7,11 @@ import 'menu_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   final Future<Map<String, dynamic>?> Function() loadCurrentUserData;
-  final WidgetBuilder authGateBuilder;
   final AuthService authService;
 
   const ProfileScreen({
     super.key,
     required this.loadCurrentUserData,
-    required this.authGateBuilder,
     required this.authService,
   });
 
@@ -174,15 +172,9 @@ class ProfileScreen extends StatelessWidget {
                   subtitle: 'Vom Konto abmelden',
                   color: Colors.red,
                   onTap: () async {
+                    debugPrint('ProfileScreen logout: tapped');
                     await authService.signOut();
-                    if (!context.mounted) return;
-                    Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: authGateBuilder),
-                      (route) => false,
-                    );
+                    debugPrint('ProfileScreen logout: signOut returned');
                   },
                 ),
               ],

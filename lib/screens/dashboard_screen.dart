@@ -37,14 +37,12 @@ Route createPremiumRoute(Widget page) {
 class DashboardScreen extends StatefulWidget {
   final Future<Map<String, dynamic>?> Function() loadCurrentUserData;
   final WidgetBuilder dailyReportScreenBuilder;
-  final WidgetBuilder authGateBuilder;
   final AuthService authService;
 
   const DashboardScreen({
     super.key,
     required this.loadCurrentUserData,
     required this.dailyReportScreenBuilder,
-    required this.authGateBuilder,
     required this.authService,
   });
 
@@ -87,9 +85,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () async {
+              debugPrint('DashboardScreen logout: pressed');
               await widget.authService.signOut();
-              if (!context.mounted) return;
-              Navigator.of(context).popUntil((route) => route.isFirst);
+              debugPrint('DashboardScreen logout: signOut returned');
             },
           ),
         ],
@@ -370,7 +368,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   createPremiumRoute(
                     ProfileScreen(
                       loadCurrentUserData: widget.loadCurrentUserData,
-                      authGateBuilder: widget.authGateBuilder,
                       authService: widget.authService,
                     ),
                   ),
