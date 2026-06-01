@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'firebase_options.dart';
 import 'screens/dashboard_screen.dart';
@@ -18,6 +19,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   runApp(const KitaConnectApp());
 }
@@ -130,6 +132,37 @@ class AuthGate extends StatelessWidget {
     });
   }
 
+  void initializeNotificationsForUser(String uid) {
+    debugPrint(
+      'AuthGate: logged-in user detected, about to initialize '
+      'NotificationService for uid=$uid',
+    );
+
+    final initialization = notificationService.initializeForUser(uid);
+
+    debugPrint(
+      'AuthGate: NotificationService.initializeForUser future started '
+      'for uid=$uid',
+    );
+
+    unawaited(
+      initialization
+          .then((_) {
+            debugPrint(
+              'AuthGate: NotificationService.initializeForUser completed '
+              'for uid=$uid',
+            );
+          })
+          .catchError((Object error, StackTrace stackTrace) {
+            debugPrint(
+              'AuthGate: NotificationService.initializeForUser failed '
+              'for uid=$uid: $error',
+            );
+            debugPrintStack(stackTrace: stackTrace);
+          }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -151,10 +184,7 @@ class AuthGate extends StatelessWidget {
         final user = snapshot.data;
 
         if (user != null) {
-          debugPrint(
-            'AuthGate: initializing notifications for uid=${user.uid}',
-          );
-          unawaited(notificationService.initializeForUser(user.uid));
+          initializeNotificationsForUser(user.uid);
 
           return DashboardScreen(
             loadCurrentUserData: getCurrentUserData,
