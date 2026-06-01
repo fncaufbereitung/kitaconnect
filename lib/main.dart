@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,8 +8,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
 
 final authService = AuthService();
+final notificationService = NotificationService();
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
@@ -144,7 +148,14 @@ class AuthGate extends StatelessWidget {
 
         returnToRoot(context);
 
-        if (snapshot.hasData) {
+        final user = snapshot.data;
+
+        if (user != null) {
+          debugPrint(
+            'AuthGate: initializing notifications for uid=${user.uid}',
+          );
+          unawaited(notificationService.initializeForUser(user.uid));
+
           return DashboardScreen(
             loadCurrentUserData: getCurrentUserData,
             dailyReportScreenBuilder: (_) => const DailyReportScreen(),
