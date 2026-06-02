@@ -9,6 +9,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/demo_dashboard_screen.dart';
+import 'screens/parent_dashboard_screen.dart';
+import 'screens/teacher_dashboard_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 
@@ -164,6 +166,42 @@ class AuthGate extends StatelessWidget {
     );
   }
 
+  Future<String> loadRoleForUser(String uid) async {
+    debugPrint('AuthGate: loading role for uid=$uid');
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final roleValue = userDoc.data()?['role'];
+    final role = roleValue is String ? roleValue.trim().toLowerCase() : '';
+
+    debugPrint('AuthGate: loaded role="$role" for uid=$uid');
+    return role;
+  }
+
+  Widget dashboardForRole(String role) {
+    switch (role) {
+      case 'teacher':
+        debugPrint('AuthGate: selected TeacherDashboardScreen');
+        return TeacherDashboardScreen(authService: authService);
+      case 'admin':
+        debugPrint(
+          'AuthGate: selected TeacherDashboardScreen with admin access',
+        );
+        return TeacherDashboardScreen(authService: authService, isAdmin: true);
+      case 'parent':
+        debugPrint('AuthGate: selected ParentDashboardScreen');
+        return ParentDashboardScreen(authService: authService);
+      default:
+        debugPrint(
+          'AuthGate: missing or unknown role="$role", falling back to '
+          'ParentDashboardScreen',
+        );
+        return ParentDashboardScreen(authService: authService);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -187,10 +225,27 @@ class AuthGate extends StatelessWidget {
         if (user != null) {
           initializeNotificationsForUser(user.uid);
 
-          return DashboardScreen(
-            loadCurrentUserData: getCurrentUserData,
-            dailyReportScreenBuilder: (_) => const DailyReportScreen(),
-            authService: authService,
+          return FutureBuilder<String>(
+            future: loadRoleForUser(user.uid),
+            builder: (context, roleSnapshot) {
+              if (roleSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (roleSnapshot.hasError) {
+                debugPrint(
+                  'AuthGate: failed to load role for uid=${user.uid}: '
+                  '${roleSnapshot.error}',
+                );
+                debugPrint('AuthGate: selected ParentDashboardScreen fallback');
+                return ParentDashboardScreen(authService: authService);
+              }
+
+              final role = roleSnapshot.data ?? '';
+              return dashboardForRole(role);
+            },
           );
         }
 
@@ -317,6 +372,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool loading = false;
+  bool passwordVisible = false;
 
   Future<void> login() async {
     try {
@@ -394,11 +450,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 18),
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
+                  obscureText: !passwordVisible,
+                  decoration: InputDecoration(
                     labelText: 'Passwort',
-                    prefixIcon: Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        passwordVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          passwordVisible = !passwordVisible;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -505,6 +573,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool loading = false;
+  bool passwordVisible = false;
 
   Future<void> register() async {
     try {
@@ -601,11 +670,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 18),
             TextField(
               controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              obscureText: !passwordVisible,
+              decoration: InputDecoration(
                 labelText: 'Passwort',
-                prefixIcon: Icon(Icons.lock_outline),
-                border: OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    passwordVisible ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      passwordVisible = !passwordVisible;
+                    });
+                  },
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 28),
