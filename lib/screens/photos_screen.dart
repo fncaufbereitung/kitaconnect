@@ -53,10 +53,31 @@ class _PhotosScreenState extends State<PhotosScreen> {
         'createdAt': Timestamp.now(),
       });
 
+      debugPrint(
+        'PhotosScreen: creating notification request for photo upload by uid=$uid',
+      );
+
+      final notificationRequest = await FirebaseFirestore.instance
+          .collection('notificationRequests')
+          .add({
+            'type': 'photo_uploaded',
+            'title': 'Neue Fotos verfügbar',
+            'body': 'Es wurden neue Fotos in KitaConnect hochgeladen.',
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdBy': uid,
+            'status': 'pending',
+          });
+
+      debugPrint(
+        'PhotosScreen: notification request created with id=${notificationRequest.id}',
+      );
+
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Foto hochgeladen')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto hochgeladen – Benachrichtigung vorbereitet'),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
