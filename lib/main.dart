@@ -166,18 +166,23 @@ class AuthGate extends StatelessWidget {
     );
   }
 
-  Future<String> loadRoleForUser(String uid) async {
-    debugPrint('AuthGate: loading role for uid=$uid');
+  Future<Map<String, dynamic>> loadAccessForUser(String uid) async {
+    debugPrint('AuthGate: loading access data for uid=$uid');
 
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
         .get();
-    final roleValue = userDoc.data()?['role'];
+    final data = userDoc.data() ?? <String, dynamic>{};
+    final roleValue = data['role'];
     final role = roleValue is String ? roleValue.trim().toLowerCase() : '';
+    final statusValue = data['status'];
+    final status = statusValue is String
+        ? statusValue.trim().toLowerCase()
+        : 'active';
 
-    debugPrint('AuthGate: loaded role="$role" for uid=$uid');
-    return role;
+    debugPrint('AuthGate: loaded role="$role", status="$status" for uid=$uid');
+    return {...data, 'role': role, 'status': status};
   }
 
   Widget dashboardForRole(String role) {
@@ -225,25 +230,36 @@ class AuthGate extends StatelessWidget {
         if (user != null) {
           initializeNotificationsForUser(user.uid);
 
-          return FutureBuilder<String>(
-            future: loadRoleForUser(user.uid),
-            builder: (context, roleSnapshot) {
-              if (roleSnapshot.connectionState == ConnectionState.waiting) {
+          return FutureBuilder<Map<String, dynamic>>(
+            future: loadAccessForUser(user.uid),
+            builder: (context, accessSnapshot) {
+              if (accessSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
                   body: Center(child: CircularProgressIndicator()),
                 );
               }
 
-              if (roleSnapshot.hasError) {
+              if (accessSnapshot.hasError) {
                 debugPrint(
-                  'AuthGate: failed to load role for uid=${user.uid}: '
-                  '${roleSnapshot.error}',
+                  'AuthGate: failed to load access data for uid=${user.uid}: '
+                  '${accessSnapshot.error}',
                 );
                 debugPrint('AuthGate: selected ParentDashboardScreen fallback');
                 return ParentDashboardScreen(authService: authService);
               }
 
-              final role = roleSnapshot.data ?? '';
+              final accessData = accessSnapshot.data ?? <String, dynamic>{};
+              final status = accessData['status'] as String? ?? 'active';
+
+              if (status != 'active') {
+                debugPrint(
+                  'AuthGate: selected PendingApprovalScreen for '
+                  'status="$status"',
+                );
+                return PendingApprovalScreen(authService: authService);
+              }
+
+              final role = accessData['role'] as String? ?? '';
               return dashboardForRole(role);
             },
           );
@@ -354,6 +370,67 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PendingApprovalScreen extends StatelessWidget {
+  final AuthService authService;
+
+  const PendingApprovalScreen({super.key, required this.authService});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF7ED),
+      appBar: AppBar(
+        title: const Text('Konto wartet'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              debugPrint('PendingApprovalScreen logout: pressed');
+              await authService.signOut();
+              debugPrint('PendingApprovalScreen logout: signOut returned');
+            },
+          ),
+        ],
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const Icon(
+                  Icons.hourglass_top_rounded,
+                  size: 50,
+                  color: Color(0xFF2563EB),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Ihr Konto wurde erstellt.\n'
+                'Bitte warten Sie, bis die Kita Ihr Konto freischaltet.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 22,
+                  height: 1.35,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -591,6 +668,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'name': nameController.text.trim(),
             'email': emailController.text.trim(),
             'role': 'parent',
+            'status': 'pending',
             'kindergartenId': '',
             'groupId': '',
             'createdAt': Timestamp.now(),
