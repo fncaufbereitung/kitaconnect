@@ -3,6 +3,18 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 
+const Color _ink = Color(0xFF334155);
+const Color _mutedInk = Color(0xFF64748B);
+const Color _lilac = Color(0xFFEDE7FF);
+const Color _peach = Color(0xFFFFE8D6);
+const Color _sky = Color(0xFFDDF1FF);
+const Color _rose = Color(0xFFFFDCEB);
+const Color _yellow = Color(0xFFFFF1A8);
+const Color _purple = Color(0xFF7C3AED);
+const Color _pink = Color(0xFFDB2777);
+const Color _blue = Color(0xFF0284C7);
+const Color _green = Color(0xFF059669);
+
 class ChildProfileScreen extends StatefulWidget {
   final AuthService authService;
   final String? childId;
@@ -115,103 +127,154 @@ class _TopLevelChildProfile extends StatelessWidget {
     debugPrint('ChildProfileScreen: loading child profile childId=$childId');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF7ED),
-      appBar: AppBar(title: const Text('Kindprofil')),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('children')
-            .doc(childId)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Fehler beim Laden des Kindes'));
-          }
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text(
+          'Kindprofil',
+          style: TextStyle(color: _ink, fontWeight: FontWeight.w900),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: _ink),
+      ),
+      body: _GradientScaffoldBody(
+        child: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('children')
+              .doc(childId)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(child: Text('Fehler beim Laden des Kindes'));
+            }
 
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (!snapshot.data!.exists) {
-            return const Center(child: Text('Kind wurde nicht gefunden.'));
-          }
+            if (!snapshot.data!.exists) {
+              return const Center(child: Text('Kind wurde nicht gefunden.'));
+            }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          final fullName = readString(data, 'fullName');
-          final groupName = readString(data, 'groupName');
-          final birthDate = formatBirthDate(data['birthDate']);
-          final notes = readString(data, 'notes');
-          final parentIds = readParentIds(data['parentIds']);
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            final fullName = readString(data, 'fullName');
+            final groupName = readString(data, 'groupName');
+            final birthDate = formatBirthDate(data['birthDate']);
+            final notes = readString(data, 'notes');
+            final parentIds = readParentIds(data['parentIds']);
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ProfileHero(
-                  fullName: fullName,
-                  groupName: groupName,
-                  birthDate: birthDate,
-                ),
-                const SizedBox(height: 18),
-                _InfoCard(
-                  title: 'Stammdaten',
-                  rows: [
-                    _InfoRow(label: 'Name', value: fullName),
-                    _InfoRow(label: 'Gruppe', value: groupName),
-                    _InfoRow(label: 'Geburtsdatum', value: birthDate),
-                    _InfoRow(
-                      label: 'Eltern UIDs',
-                      value: parentIds.isEmpty
-                          ? 'Keine Zuordnung'
-                          : parentIds.join(', '),
-                    ),
-                    _InfoRow(label: 'Notizen', value: notes),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Kindbezogene Bereiche',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF111827),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 92, 20, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ChildHeroCard(
+                    fullName: fullName,
+                    groupName: groupName,
+                    birthDate: birthDate,
+                    parentCount: parentIds.length,
                   ),
-                ),
-                const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.12,
-                  children: const [
-                    _PlaceholderSection(
-                      title: 'Nachrichten',
-                      icon: Icons.chat_bubble_rounded,
-                      color: Colors.blue,
+                  const SizedBox(height: 18),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _ProfileChip(
+                        icon: Icons.groups_rounded,
+                        label: groupName.isEmpty ? 'Keine Gruppe' : groupName,
+                        color: _green,
+                      ),
+                      _ProfileChip(
+                        icon: Icons.cake_rounded,
+                        label: birthDate.isEmpty ? 'Geburtsdatum' : birthDate,
+                        color: _pink,
+                      ),
+                      _ProfileChip(
+                        icon: Icons.family_restroom_rounded,
+                        label: parentIds.isEmpty
+                            ? 'Keine Zuordnung'
+                            : '${parentIds.length} Elternkonto',
+                        color: _purple,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _ProfileInfoCard(
+                    title: 'Stammdaten',
+                    icon: Icons.badge_rounded,
+                    color: _blue,
+                    rows: [
+                      _InfoRow(label: 'Name', value: fullName),
+                      _InfoRow(label: 'Gruppe', value: groupName),
+                      _InfoRow(label: 'Geburtsdatum', value: birthDate),
+                      _InfoRow(
+                        label: 'Eltern UIDs',
+                        value: parentIds.isEmpty
+                            ? 'Keine Zuordnung'
+                            : parentIds.join(', '),
+                      ),
+                      _InfoRow(label: 'Notizen', value: notes),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    'Kindbezogene Bereiche',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: _ink,
                     ),
-                    _PlaceholderSection(
-                      title: 'Fotos',
-                      icon: Icons.photo_rounded,
-                      color: Colors.orange,
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Alles Wichtige rund um den Kita-Alltag.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: _mutedInk,
                     ),
-                    _PlaceholderSection(
-                      title: 'Tagesbericht',
-                      icon: Icons.assignment_rounded,
-                      color: Colors.pink,
-                    ),
-                    _PlaceholderSection(
-                      title: 'Entwicklung',
-                      icon: Icons.auto_stories_rounded,
-                      color: Colors.purple,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
+                  ),
+                  const SizedBox(height: 14),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 0.98,
+                    children: const [
+                      _PlaceholderSection(
+                        title: 'Nachrichten',
+                        icon: Icons.chat_bubble_rounded,
+                        colors: [Color(0xFFEAF7FF), _sky],
+                        color: _blue,
+                      ),
+                      _PlaceholderSection(
+                        title: 'Fotos',
+                        icon: Icons.photo_rounded,
+                        colors: [Color(0xFFFFF7E8), _peach],
+                        color: Color(0xFFF97316),
+                      ),
+                      _PlaceholderSection(
+                        title: 'Tagesbericht',
+                        icon: Icons.assignment_rounded,
+                        colors: [Color(0xFFFFF2F7), _rose],
+                        color: _pink,
+                      ),
+                      _PlaceholderSection(
+                        title: 'Entwicklung',
+                        icon: Icons.auto_stories_rounded,
+                        colors: [Color(0xFFF6EEFF), _lilac],
+                        color: _purple,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -237,167 +300,432 @@ class _LegacyEditableChildProfile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mein Kind')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(26),
-        child: Column(
-          children: [
-            const Icon(Icons.child_care, size: 90, color: Color(0xFF2563EB)),
-            const SizedBox(height: 24),
-            TextField(
-              controller: childNameController,
-              decoration: const InputDecoration(
-                labelText: 'Name des Kindes',
-                border: OutlineInputBorder(),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text(
+          'Mein Kind',
+          style: TextStyle(color: _ink, fontWeight: FontWeight.w900),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: _ink),
+      ),
+      body: _GradientScaffoldBody(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 92, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ChildHeroCard(
+                fullName: childNameController.text,
+                groupName: groupController.text,
+                birthDate: birthDateController.text,
+                parentCount: 1,
               ),
-            ),
-            const SizedBox(height: 18),
-            TextField(
-              controller: groupController,
-              decoration: const InputDecoration(
-                labelText: 'Gruppe',
-                hintText: 'z.B. Sonnengruppe',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 18),
+              _ProfileInfoCard(
+                title: 'Profil bearbeiten',
+                icon: Icons.edit_note_rounded,
+                color: _purple,
+                children: [
+                  _PremiumTextField(
+                    controller: childNameController,
+                    labelText: 'Name des Kindes',
+                    icon: Icons.face_rounded,
+                  ),
+                  const SizedBox(height: 16),
+                  _PremiumTextField(
+                    controller: groupController,
+                    labelText: 'Gruppe',
+                    hintText: 'z.B. Sonnengruppe',
+                    icon: Icons.groups_rounded,
+                  ),
+                  const SizedBox(height: 16),
+                  _PremiumTextField(
+                    controller: birthDateController,
+                    labelText: 'Geburtsdatum',
+                    hintText: 'z.B. 21.05.2021',
+                    icon: Icons.cake_rounded,
+                  ),
+                  const SizedBox(height: 16),
+                  _PremiumTextField(
+                    controller: allergiesController,
+                    labelText: 'Allergien / Hinweise',
+                    icon: Icons.medical_information_rounded,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: FilledButton.icon(
+                      onPressed: loading ? null : onSave,
+                      icon: loading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.4,
+                              ),
+                            )
+                          : const Icon(Icons.save_rounded),
+                      label: const Text('Speichern'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _purple,
+                        foregroundColor: Colors.white,
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 18),
-            TextField(
-              controller: birthDateController,
-              decoration: const InputDecoration(
-                labelText: 'Geburtsdatum',
-                hintText: 'z.B. 21.05.2021',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 18),
-            TextField(
-              controller: allergiesController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Allergien / Hinweise',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: loading ? null : onSave,
-                child: loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Speichern'),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ProfileHero extends StatelessWidget {
+class _GradientScaffoldBody extends StatelessWidget {
+  final Widget child;
+
+  const _GradientScaffoldBody({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFFF7EA),
+            Color(0xFFFFEEF8),
+            Color(0xFFEFF7FF),
+            Color(0xFFEFFFF6),
+          ],
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _ChildHeroCard extends StatelessWidget {
   final String fullName;
   final String groupName;
   final String birthDate;
+  final int parentCount;
 
-  const _ProfileHero({
+  const _ChildHeroCard({
     required this.fullName,
     required this.groupName,
     required this.birthDate,
+    required this.parentCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final displayName = fullName.isEmpty ? 'Kindprofil' : fullName;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(34),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF8FB3), Color(0xFFA78BFA), Color(0xFF38BDF8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFA78BFA).withValues(alpha: 0.30),
+            blurRadius: 28,
+            offset: const Offset(0, 15),
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const _DecorativeIcon(
+            icon: Icons.auto_awesome_rounded,
+            color: Colors.white24,
+            size: 104,
+            right: -18,
+            top: -24,
+          ),
+          const _DecorativeIcon(
+            icon: Icons.favorite_rounded,
+            color: Colors.white30,
+            size: 28,
+            right: 96,
+            top: 6,
+          ),
+          const _DecorativeIcon(
+            icon: Icons.star_rounded,
+            color: Colors.white38,
+            size: 22,
+            left: 132,
+            bottom: 8,
+          ),
+          Row(
+            children: [
+              _ChildAvatar(name: displayName),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        height: 1.05,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _HeroMiniChip(
+                          icon: Icons.groups_rounded,
+                          label: groupName.isEmpty ? 'Gruppe' : groupName,
+                        ),
+                        _HeroMiniChip(
+                          icon: Icons.family_restroom_rounded,
+                          label: parentCount == 0
+                              ? 'Keine Eltern'
+                              : '$parentCount verbunden',
+                        ),
+                      ],
+                    ),
+                    if (birthDate.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _HeroMiniChip(icon: Icons.cake_rounded, label: birthDate),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChildAvatar extends StatelessWidget {
+  final String name;
+
+  const _ChildAvatar({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+
+    return Container(
+      width: 82,
+      height: 82,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.26),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Container(
+          width: 66,
+          height: 66,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [_yellow, _peach]),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              initial,
+              style: const TextStyle(
+                color: _pink,
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroMiniChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _HeroMiniChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 15),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileInfoCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final List<_InfoRow>? rows;
+  final List<Widget>? children;
+
+  const _ProfileInfoCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    this.rows,
+    this.children,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(34),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF38BDF8), Color(0xFF8B5CF6), Color(0xFFF472B6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.90)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF8B5CF6).withValues(alpha: 0.28),
+            color: const Color(0xFF94A3B8).withValues(alpha: 0.16),
             blurRadius: 24,
-            offset: const Offset(0, 12),
+            offset: const Offset(0, 13),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const Icon(
-              Icons.child_care_rounded,
-              color: Colors.white,
-              size: 42,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fullName.isEmpty ? 'Kindprofil' : fullName,
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
+                    fontSize: 19,
                     fontWeight: FontWeight.w900,
+                    color: _ink,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  [
-                    if (groupName.isNotEmpty) groupName,
-                    if (birthDate.isNotEmpty) birthDate,
-                  ].join(' · '),
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-              ],
-            ),
+              ),
+              Icon(
+                Icons.auto_awesome_rounded,
+                color: color.withValues(alpha: 0.32),
+                size: 22,
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
+          if (rows != null)
+            for (final row in rows!) row,
+          if (children != null) ...children!,
         ],
       ),
     );
   }
 }
 
-class _InfoCard extends StatelessWidget {
-  final String title;
-  final List<_InfoRow> rows;
+class _ProfileChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
 
-  const _InfoCard({required this.title, required this.rows});
+  const _ProfileChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF111827),
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.90),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
             ),
-            const SizedBox(height: 12),
-            for (final row in rows) row,
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -411,25 +739,35 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 112,
+            width: 110,
             child: Text(
               label,
               style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF64748B),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: _mutedInk,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value.isEmpty ? '-' : value,
-              style: const TextStyle(color: Color(0xFF1E293B), height: 1.35),
+              style: const TextStyle(
+                color: _ink,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
             ),
           ),
         ],
@@ -438,50 +776,164 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+class _PremiumTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String labelText;
+  final String? hintText;
+  final IconData icon;
+  final int maxLines;
+
+  const _PremiumTextField({
+    required this.controller,
+    required this.labelText,
+    required this.icon,
+    this.hintText,
+    this.maxLines = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        prefixIcon: Icon(icon, color: _purple),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: _purple, width: 1.4),
+        ),
+      ),
+    );
+  }
+}
+
 class _PlaceholderSection extends StatelessWidget {
   final String title;
   final IconData icon;
+  final List<Color> colors;
   final Color color;
 
   const _PlaceholderSection({
     required this.title,
     required this.icon,
+    required this.colors,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: color),
-            ),
-            const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Vorbereitet',
-              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
         ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.16),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -15,
+            top: -18,
+            child: Icon(
+              Icons.favorite_rounded,
+              color: Colors.white.withValues(alpha: 0.34),
+              size: 66,
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const Spacer(),
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: _ink,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Vorbereitet',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _mutedInk,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DecorativeIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  final double? left;
+  final double? top;
+  final double? right;
+  final double? bottom;
+
+  const _DecorativeIcon({
+    required this.icon,
+    required this.color,
+    required this.size,
+    this.left,
+    this.top,
+    this.right,
+    this.bottom,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Icon(icon, color: color, size: size);
+
+    if (left == null && top == null && right == null && bottom == null) {
+      return child;
+    }
+
+    return Positioned(
+      left: left,
+      top: top,
+      right: right,
+      bottom: bottom,
+      child: child,
     );
   }
 }
