@@ -153,9 +153,9 @@ class DemoDashboardScreen extends StatelessWidget {
 
   static const _demoCards = [
     _DemoCardData(
-      title: 'Fotos',
-      subtitle: '4 Momente von heute',
-      icon: Icons.photo_rounded,
+      title: 'Kinderportfolio',
+      subtitle: 'Interne Dokumentation',
+      icon: Icons.auto_stories_rounded,
       color: Colors.orange,
       type: _DemoSectionType.photos,
     ),

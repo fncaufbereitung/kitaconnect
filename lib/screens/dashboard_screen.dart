@@ -201,9 +201,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               mainAxisSpacing: 18,
               children: [
                 DashboardCard(
-                  title: 'Fotos',
-                  subtitle: 'Schöne Momente',
-                  icon: Icons.photo,
+                  title: 'Kinderportfolio',
+                  subtitle: 'Interne Dokumentation',
+                  icon: Icons.auto_stories,
                   color: Colors.orange,
                   onTap: () {
                     Navigator.push(
@@ -388,8 +388,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 label: 'Start',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.photo_rounded),
-                label: 'Fotos',
+                icon: Icon(Icons.auto_stories_rounded),
+                label: 'Portfolio',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.chat_bubble_rounded),

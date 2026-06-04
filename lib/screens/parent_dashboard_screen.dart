@@ -8,7 +8,7 @@ import 'dashboard_screen.dart' show createPremiumRoute;
 import 'events_screen.dart';
 import 'menu_screen.dart';
 import 'messages_screen.dart';
-import 'photos_screen.dart';
+import 'parent_requests_screen.dart';
 
 const Color _ink = Color(0xFF334155);
 const Color _mutedInk = Color(0xFF64748B);
@@ -103,14 +103,6 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   Widget build(BuildContext context) {
     final featureCards = [
       _DashboardFeatureData(
-        title: 'Fotos',
-        subtitle: 'Kita-Momente',
-        icon: Icons.photo_rounded,
-        colors: const [Color(0xFFFFF7E8), _peach],
-        accent: const Color(0xFFF97316),
-        onTap: () => openFeature(PhotosScreen(authService: widget.authService)),
-      ),
-      _DashboardFeatureData(
         title: 'Nachrichten',
         subtitle: 'Kita-Team',
         icon: Icons.chat_bubble_rounded,
@@ -151,6 +143,15 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         accent: _pink,
         onTap: () =>
             openFeature(DailyReportsScreen(authService: widget.authService)),
+      ),
+      _DashboardFeatureData(
+        title: 'Elternmitteilungen',
+        subtitle: 'Krank, Abholung & Hinweise',
+        icon: Icons.mark_email_unread_rounded,
+        colors: const [Color(0xFFF6EEFF), _lilac],
+        accent: _purple,
+        onTap: () =>
+            openFeature(ParentRequestsScreen(authService: widget.authService)),
       ),
       _DashboardFeatureData(
         title: 'Abwesenheiten',
@@ -301,12 +302,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           setState(() => selectedIndex = index);
 
           if (index == 1) {
-            openFeature(PhotosScreen(authService: widget.authService));
-          }
-          if (index == 2) {
             openFeature(MessagesScreen(authService: widget.authService));
           }
-          if (index == 3) {
+          if (index == 2) {
             openAssignedChildren();
           }
         },
@@ -933,10 +931,6 @@ class _ParentBottomNavigation extends StatelessWidget {
               BottomNavigationBarItem(
                 icon: Icon(Icons.home_rounded),
                 label: 'Start',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.photo_rounded),
-                label: 'Fotos',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.chat_bubble_rounded),

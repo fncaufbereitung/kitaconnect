@@ -9,6 +9,7 @@ import 'events_screen.dart';
 import 'menu_screen.dart';
 import 'messages_screen.dart';
 import 'photos_screen.dart';
+import 'teacher_requests_screen.dart';
 
 const Color _ink = Color(0xFF334155);
 const Color _mutedInk = Color(0xFF64748B);
@@ -65,9 +66,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             openFeature(MessagesScreen(authService: widget.authService)),
       ),
       _TeacherFeatureData(
-        title: 'Fotos hochladen',
-        subtitle: 'Kita-Momente teilen',
-        icon: Icons.add_a_photo_rounded,
+        title: 'Kinderportfolio',
+        subtitle: 'Interne Dokumentation',
+        icon: Icons.auto_stories_rounded,
         colors: const [Color(0xFFE0F2FE), Color(0xFFBAE6FD)],
         accent: const Color(0xFF0284C7),
         onTap: () => openFeature(PhotosScreen(authService: widget.authService)),
@@ -96,6 +97,15 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         colors: const [Color(0xFFFFE4EF), Color(0xFFFFA7C8)],
         accent: const Color(0xFFBE185D),
         onTap: () => openFeature(EventsScreen(authService: widget.authService)),
+      ),
+      _TeacherFeatureData(
+        title: 'Elternmitteilungen',
+        subtitle: 'Anfragen bearbeiten',
+        icon: Icons.mark_email_unread_rounded,
+        colors: const [Color(0xFFEAF7FF), Color(0xFFDDF1FF)],
+        accent: _blue,
+        onTap: () =>
+            openFeature(TeacherRequestsScreen(authService: widget.authService)),
       ),
       if (widget.isAdmin)
         _TeacherFeatureData(
@@ -833,8 +843,8 @@ class _TeacherBottomNavigation extends StatelessWidget {
                 label: 'Nachrichten',
               ),
               const BottomNavigationBarItem(
-                icon: Icon(Icons.photo_rounded),
-                label: 'Fotos',
+                icon: Icon(Icons.auto_stories_rounded),
+                label: 'Portfolio',
               ),
               BottomNavigationBarItem(
                 icon: Icon(

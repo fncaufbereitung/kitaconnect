@@ -174,7 +174,7 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Kinderverwaltung als Basis fuer Nachrichten, Fotos, Berichte und Entwicklung.',
+                        'Kinderverwaltung als Basis fuer Nachrichten, Portfolio, Berichte und Entwicklung.',
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF1E293B),

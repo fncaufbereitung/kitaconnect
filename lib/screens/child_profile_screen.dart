@@ -277,8 +277,8 @@ class _TopLevelChildProfile extends StatelessWidget {
                             color: _blue,
                           ),
                           _PlaceholderSection(
-                            title: 'Fotos',
-                            icon: Icons.photo_rounded,
+                            title: 'Kinderportfolio',
+                            icon: Icons.auto_stories_rounded,
                             colors: [Color(0xFFFFF7E8), _peach],
                             color: Color(0xFFF97316),
                           ),
