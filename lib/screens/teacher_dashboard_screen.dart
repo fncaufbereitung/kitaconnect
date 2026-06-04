@@ -12,11 +12,9 @@ import 'photos_screen.dart';
 
 const Color _ink = Color(0xFF334155);
 const Color _mutedInk = Color(0xFF64748B);
-const Color _lilac = Color(0xFFEDE7FF);
 const Color _peach = Color(0xFFFFE8D6);
 const Color _mint = Color(0xFFDFF7EA);
 const Color _sky = Color(0xFFDDF1FF);
-const Color _rose = Color(0xFFFFDCEB);
 const Color _yellow = Color(0xFFFFF1A8);
 const Color _purple = Color(0xFF7C3AED);
 const Color _pink = Color(0xFFDB2777);
@@ -52,8 +50,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         title: 'Kinder',
         subtitle: 'Profile & Gruppen',
         icon: Icons.child_care_rounded,
-        colors: const [Color(0xFFF6EEFF), _lilac],
-        accent: _purple,
+        colors: const [Color(0xFFF0E4FF), Color(0xFFDCC7FF)],
+        accent: const Color(0xFF8B5CF6),
         onTap: () =>
             openFeature(ChildrenScreen(authService: widget.authService)),
       ),
@@ -61,8 +59,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         title: 'Nachrichten senden',
         subtitle: 'Eltern informieren',
         icon: Icons.send_rounded,
-        colors: const [Color(0xFFEAF7FF), _sky],
-        accent: _blue,
+        colors: const [Color(0xFFDDFCF3), Color(0xFFA7F3D0)],
+        accent: const Color(0xFF0D9488),
         onTap: () =>
             openFeature(MessagesScreen(authService: widget.authService)),
       ),
@@ -70,40 +68,40 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         title: 'Fotos hochladen',
         subtitle: 'Kita-Momente teilen',
         icon: Icons.add_a_photo_rounded,
-        colors: const [Color(0xFFFFF7E8), _peach],
-        accent: const Color(0xFFF97316),
+        colors: const [Color(0xFFE0F2FE), Color(0xFFBAE6FD)],
+        accent: const Color(0xFF0284C7),
         onTap: () => openFeature(PhotosScreen(authService: widget.authService)),
       ),
       _TeacherFeatureData(
         title: 'Tagesberichte',
         subtitle: 'Berichte erstellen',
         icon: Icons.assignment_rounded,
-        colors: const [Color(0xFFFFF2F7), _rose],
-        accent: _pink,
+        colors: const [Color(0xFFFFE4F1), Color(0xFFFFB8D8)],
+        accent: const Color(0xFFDB2777),
         onTap: () => openFeature(const DailyReportsScreen()),
       ),
       _TeacherFeatureData(
         title: 'Wochenmenü bearbeiten',
         subtitle: 'Essensplan pflegen',
         icon: Icons.restaurant_menu_rounded,
-        colors: const [Color(0xFFF0FFF8), _mint],
-        accent: _green,
+        colors: const [Color(0xFFFFF1C2), Color(0xFFFFC878)],
+        accent: const Color(0xFFF97316),
         onTap: () => openFeature(const MenuScreen()),
       ),
       _TeacherFeatureData(
         title: 'Events erstellen',
         subtitle: 'Termine planen',
         icon: Icons.event_rounded,
-        colors: const [Color(0xFFFFFCEB), _yellow],
-        accent: const Color(0xFFEAB308),
+        colors: const [Color(0xFFFFE4EF), Color(0xFFFFA7C8)],
+        accent: const Color(0xFFBE185D),
         onTap: () => openFeature(const EventsScreen()),
       ),
       _TeacherFeatureData(
         title: 'Gruppen',
         subtitle: 'Kita-Struktur',
         icon: Icons.groups_rounded,
-        colors: const [Color(0xFFEEF2FF), Color(0xFFE0E7FF)],
-        accent: const Color(0xFF4F46E5),
+        colors: const [Color(0xFFEDE9FE), Color(0xFFC4B5FD)],
+        accent: const Color(0xFF6D28D9),
         onTap: () => openFeature(const AdminScreen()),
       ),
     ];
@@ -619,9 +617,9 @@ class _TeacherFeatureCardState extends State<_TeacherFeatureCard> {
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: widget.data.accent.withValues(alpha: 0.18),
-              blurRadius: 20,
-              offset: const Offset(0, 12),
+              color: widget.data.accent.withValues(alpha: 0.24),
+              blurRadius: 22,
+              offset: const Offset(0, 13),
             ),
           ],
         ),
@@ -665,29 +663,29 @@ class _TeacherFeatureCardState extends State<_TeacherFeatureCard> {
                             width: 56,
                             height: 56,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.84),
+                              color: Colors.white.withValues(alpha: 0.88),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
                                   color: widget.data.accent.withValues(
-                                    alpha: 0.14,
+                                    alpha: 0.22,
                                   ),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 6),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 7),
                                 ),
                               ],
                             ),
                             child: Icon(
                               widget.data.icon,
                               color: widget.data.accent,
-                              size: 30,
+                              size: 34,
                             ),
                           ),
                           const Spacer(),
                           Icon(
                             Icons.auto_awesome_rounded,
-                            color: widget.data.accent.withValues(alpha: 0.30),
-                            size: 22,
+                            color: widget.data.accent.withValues(alpha: 0.42),
+                            size: 24,
                           ),
                         ],
                       ),
@@ -696,7 +694,7 @@ class _TeacherFeatureCardState extends State<_TeacherFeatureCard> {
                         width: 34,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: widget.data.accent.withValues(alpha: 0.22),
+                          color: widget.data.accent.withValues(alpha: 0.34),
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
@@ -706,8 +704,8 @@ class _TeacherFeatureCardState extends State<_TeacherFeatureCard> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: _ink,
-                          fontSize: 16,
+                          color: Color(0xFF1E293B),
+                          fontSize: 16.5,
                           fontWeight: FontWeight.w900,
                           height: 1.12,
                         ),
@@ -718,9 +716,9 @@ class _TeacherFeatureCardState extends State<_TeacherFeatureCard> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: _mutedInk,
+                          color: Color(0xFF475569),
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           height: 1.25,
                         ),
                       ),
