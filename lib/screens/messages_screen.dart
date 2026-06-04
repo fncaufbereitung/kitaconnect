@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/role_guard.dart';
 
 const Color _ink = Color(0xFF334155);
 const Color _mutedInk = Color(0xFF64748B);
@@ -25,8 +26,15 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen> {
   final messageController = TextEditingController();
   bool sending = false;
+  late final RoleGuardService roleGuardService;
 
-  Future<void> sendMessage() async {
+  @override
+  void initState() {
+    super.initState();
+    roleGuardService = RoleGuardService(authService: widget.authService);
+  }
+
+  Future<void> sendMessage(UserAccess access) async {
     final text = messageController.text.trim();
     if (text.isEmpty || sending) return;
 
@@ -57,6 +65,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             'createdAt': FieldValue.serverTimestamp(),
             'childName': '',
             'status': 'sent',
+            ...access.contentScopeFields(),
           });
 
       debugPrint(
@@ -169,7 +178,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Widget build(BuildContext context) {
     final currentUserId = widget.authService.currentUser?.uid;
 
-    return Scaffold(
+    return FutureBuilder<UserAccess?>(
+      future: roleGuardService.loadAccess(),
+      builder: (context, accessSnapshot) {
+        if (accessSnapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final access = accessSnapshot.data;
+        if (access == null) return const AccessDeniedScreen();
+
+        return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -208,8 +229,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('messages')
+                stream: access
+                    .scopeCollection(
+                      FirebaseFirestore.instance.collection('messages'),
+                      createdByField: 'senderId',
+                    )
                     .orderBy('createdAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
@@ -256,11 +280,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
             _MessageInputBar(
               controller: messageController,
               sending: sending,
-              onSend: sendMessage,
+              onSend: () => sendMessage(access),
             ),
           ],
         ),
       ),
+        );
+      },
     );
   }
 }

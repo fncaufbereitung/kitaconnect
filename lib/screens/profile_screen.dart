@@ -127,7 +127,9 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const MenuScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => MenuScreen(authService: authService),
+                      ),
                     );
                   },
                 ),

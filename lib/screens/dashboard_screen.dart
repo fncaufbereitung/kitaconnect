@@ -52,7 +52,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int selectedIndex = 0;
-  bool isTeacherOrAdmin = false;
+  bool isAdmin = false;
 
   @override
   void initState() {
@@ -65,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final role = data?['role'] ?? 'parent';
 
     setState(() {
-      isTeacherOrAdmin = role == 'teacher' || role == 'admin';
+      isAdmin = role == 'admin';
     });
   }
 
@@ -222,7 +222,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      createPremiumRoute(const MenuScreen()),
+                      createPremiumRoute(
+                        MenuScreen(authService: widget.authService),
+                      ),
                     );
                   },
                 ),
@@ -241,7 +243,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
                   },
                 ),
-                if (isTeacherOrAdmin)
+                if (isAdmin)
                   DashboardCard(
                     title: 'Admin-Bereich',
                     subtitle: 'Für Erzieherinnen',
@@ -250,7 +252,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        createPremiumRoute(const AdminScreen()),
+                        createPremiumRoute(
+                          AdminScreen(authService: widget.authService),
+                        ),
                       );
                     },
                   ),
@@ -263,7 +267,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      createPremiumRoute(const EventsScreen()),
+                      createPremiumRoute(
+                        EventsScreen(authService: widget.authService),
+                      ),
                     );
                   },
                 ),
@@ -298,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
 
-                if (isTeacherOrAdmin)
+                if (isAdmin)
                   DashboardCard(
                     title: 'Admin',
                     subtitle: 'Verwaltung',
@@ -307,7 +313,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        createPremiumRoute(const AdminScreen()),
+                        createPremiumRoute(
+                          AdminScreen(authService: widget.authService),
+                        ),
                       );
                     },
                   ),

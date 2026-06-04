@@ -125,7 +125,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         icon: Icons.restaurant_menu_rounded,
         colors: const [Color(0xFFF0FFF8), _mint],
         accent: _green,
-        onTap: () => openFeature(const MenuScreen()),
+        onTap: () => openFeature(MenuScreen(authService: widget.authService)),
       ),
       _DashboardFeatureData(
         title: 'Kalender',
@@ -133,7 +133,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         icon: Icons.event_rounded,
         colors: const [Color(0xFFFFFCEB), _yellow],
         accent: const Color(0xFFEAB308),
-        onTap: () => openFeature(const EventsScreen()),
+        onTap: () => openFeature(EventsScreen(authService: widget.authService)),
       ),
       _DashboardFeatureData(
         title: 'Mein Kind',
@@ -149,7 +149,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         icon: Icons.assignment_rounded,
         colors: const [Color(0xFFFFF2F7), _rose],
         accent: _pink,
-        onTap: () => openFeature(const DailyReportsScreen()),
+        onTap: () =>
+            openFeature(DailyReportsScreen(authService: widget.authService)),
       ),
       _DashboardFeatureData(
         title: 'Abwesenheiten',

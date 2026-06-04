@@ -1,16 +1,35 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
+import '../services/role_guard.dart';
 import 'menu_screen.dart';
 
-class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+class AdminScreen extends StatelessWidget {
+  final AuthService authService;
+
+  const AdminScreen({super.key, required this.authService});
 
   @override
-  State<AdminScreen> createState() => _AdminScreenState();
+  Widget build(BuildContext context) {
+    return RoleGuard(
+      authService: authService,
+      allowed: (access) => access.canManageUsers,
+      builder: (context, access) => _AdminContent(authService: authService),
+    );
+  }
 }
 
-class _AdminScreenState extends State<AdminScreen> {
+class _AdminContent extends StatefulWidget {
+  final AuthService authService;
+
+  const _AdminContent({required this.authService});
+
+  @override
+  State<_AdminContent> createState() => _AdminContentState();
+}
+
+class _AdminContentState extends State<_AdminContent> {
   final groupNameController = TextEditingController();
   bool loading = false;
 
@@ -82,7 +101,10 @@ class _AdminScreenState extends State<AdminScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const MenuScreen()),
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          MenuScreen(authService: widget.authService),
+                    ),
                   );
                 },
               ),

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/role_guard.dart';
 
 const Color _ink = Color(0xFF334155);
 const Color _mutedInk = Color(0xFF64748B);
@@ -103,7 +104,10 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (usesTopLevelChildProfile) {
-      return _TopLevelChildProfile(childId: widget.childId!);
+      return _TopLevelChildProfile(
+        authService: widget.authService,
+        childId: widget.childId!,
+      );
     }
 
     return _LegacyEditableChildProfile(
@@ -118,9 +122,13 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
 }
 
 class _TopLevelChildProfile extends StatelessWidget {
+  final AuthService authService;
   final String childId;
 
-  const _TopLevelChildProfile({required this.childId});
+  const _TopLevelChildProfile({
+    required this.authService,
+    required this.childId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -158,120 +166,140 @@ class _TopLevelChildProfile extends StatelessWidget {
             }
 
             final data = snapshot.data!.data() as Map<String, dynamic>;
-            final fullName = readString(data, 'fullName');
-            final groupName = readString(data, 'groupName');
-            final birthDate = formatBirthDate(data['birthDate']);
-            final notes = readString(data, 'notes');
-            final parentIds = readParentIds(data['parentIds']);
+            return FutureBuilder<UserAccess?>(
+              future: RoleGuardService(authService: authService).loadAccess(),
+              builder: (context, accessSnapshot) {
+                if (accessSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 92, 20, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ChildHeroCard(
-                    fullName: fullName,
-                    groupName: groupName,
-                    birthDate: birthDate,
-                    parentCount: parentIds.length,
-                  ),
-                  const SizedBox(height: 18),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                final access = accessSnapshot.data;
+                if (access == null || !access.canViewChild(childId, data)) {
+                  return const AccessDeniedScreen();
+                }
+
+                final fullName = readString(data, 'fullName');
+                final groupName = readString(data, 'groupName');
+                final birthDate = formatBirthDate(data['birthDate']);
+                final notes = readString(data, 'notes');
+                final parentIds = readParentIds(data['parentIds']);
+                final canSeeParentIds = access.isAdmin || access.isTeacher;
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 92, 20, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ProfileChip(
-                        icon: Icons.groups_rounded,
-                        label: groupName.isEmpty ? 'Keine Gruppe' : groupName,
-                        color: _green,
+                      _ChildHeroCard(
+                        fullName: fullName,
+                        groupName: groupName,
+                        birthDate: birthDate,
+                        parentCount: parentIds.length,
                       ),
-                      _ProfileChip(
-                        icon: Icons.cake_rounded,
-                        label: birthDate.isEmpty ? 'Geburtsdatum' : birthDate,
-                        color: _pink,
+                      const SizedBox(height: 18),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _ProfileChip(
+                            icon: Icons.groups_rounded,
+                            label: groupName.isEmpty
+                                ? 'Keine Gruppe'
+                                : groupName,
+                            color: _green,
+                          ),
+                          _ProfileChip(
+                            icon: Icons.cake_rounded,
+                            label: birthDate.isEmpty
+                                ? 'Geburtsdatum'
+                                : birthDate,
+                            color: _pink,
+                          ),
+                          _ProfileChip(
+                            icon: Icons.family_restroom_rounded,
+                            label: parentIds.isEmpty
+                                ? 'Keine Zuordnung'
+                                : '${parentIds.length} Elternkonto',
+                            color: _purple,
+                          ),
+                        ],
                       ),
-                      _ProfileChip(
-                        icon: Icons.family_restroom_rounded,
-                        label: parentIds.isEmpty
-                            ? 'Keine Zuordnung'
-                            : '${parentIds.length} Elternkonto',
-                        color: _purple,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  _ProfileInfoCard(
-                    title: 'Stammdaten',
-                    icon: Icons.badge_rounded,
-                    color: _blue,
-                    rows: [
-                      _InfoRow(label: 'Name', value: fullName),
-                      _InfoRow(label: 'Gruppe', value: groupName),
-                      _InfoRow(label: 'Geburtsdatum', value: birthDate),
-                      _InfoRow(
-                        label: 'Eltern UIDs',
-                        value: parentIds.isEmpty
-                            ? 'Keine Zuordnung'
-                            : parentIds.join(', '),
-                      ),
-                      _InfoRow(label: 'Notizen', value: notes),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'Kindbezogene Bereiche',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: _ink,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Alles Wichtige rund um den Kita-Alltag.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _mutedInk,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: 0.98,
-                    children: const [
-                      _PlaceholderSection(
-                        title: 'Nachrichten',
-                        icon: Icons.chat_bubble_rounded,
-                        colors: [Color(0xFFEAF7FF), _sky],
+                      const SizedBox(height: 18),
+                      _ProfileInfoCard(
+                        title: 'Stammdaten',
+                        icon: Icons.badge_rounded,
                         color: _blue,
+                        rows: [
+                          _InfoRow(label: 'Name', value: fullName),
+                          _InfoRow(label: 'Gruppe', value: groupName),
+                          _InfoRow(label: 'Geburtsdatum', value: birthDate),
+                          if (canSeeParentIds)
+                            _InfoRow(
+                              label: 'Eltern UIDs',
+                              value: parentIds.isEmpty
+                                  ? 'Keine Zuordnung'
+                                  : parentIds.join(', '),
+                            ),
+                          _InfoRow(label: 'Notizen', value: notes),
+                        ],
                       ),
-                      _PlaceholderSection(
-                        title: 'Fotos',
-                        icon: Icons.photo_rounded,
-                        colors: [Color(0xFFFFF7E8), _peach],
-                        color: Color(0xFFF97316),
+                      const SizedBox(height: 22),
+                      const Text(
+                        'Kindbezogene Bereiche',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: _ink,
+                        ),
                       ),
-                      _PlaceholderSection(
-                        title: 'Tagesbericht',
-                        icon: Icons.assignment_rounded,
-                        colors: [Color(0xFFFFF2F7), _rose],
-                        color: _pink,
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Alles Wichtige rund um den Kita-Alltag.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _mutedInk,
+                        ),
                       ),
-                      _PlaceholderSection(
-                        title: 'Entwicklung',
-                        icon: Icons.auto_stories_rounded,
-                        colors: [Color(0xFFF6EEFF), _lilac],
-                        color: _purple,
+                      const SizedBox(height: 14),
+                      GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.98,
+                        children: const [
+                          _PlaceholderSection(
+                            title: 'Nachrichten',
+                            icon: Icons.chat_bubble_rounded,
+                            colors: [Color(0xFFEAF7FF), _sky],
+                            color: _blue,
+                          ),
+                          _PlaceholderSection(
+                            title: 'Fotos',
+                            icon: Icons.photo_rounded,
+                            colors: [Color(0xFFFFF7E8), _peach],
+                            color: Color(0xFFF97316),
+                          ),
+                          _PlaceholderSection(
+                            title: 'Tagesbericht',
+                            icon: Icons.assignment_rounded,
+                            colors: [Color(0xFFFFF2F7), _rose],
+                            color: _pink,
+                          ),
+                          _PlaceholderSection(
+                            title: 'Entwicklung',
+                            icon: Icons.auto_stories_rounded,
+                            colors: [Color(0xFFF6EEFF), _lilac],
+                            color: _purple,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         ),

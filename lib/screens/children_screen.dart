@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/role_guard.dart';
 import 'child_profile_screen.dart';
 import 'dashboard_screen.dart' show createPremiumRoute;
 
@@ -22,8 +23,22 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
   final parentUidController = TextEditingController();
   final notesController = TextEditingController();
   bool saving = false;
+  late final RoleGuardService roleGuardService;
 
-  Future<void> addChild() async {
+  @override
+  void initState() {
+    super.initState();
+    roleGuardService = RoleGuardService(authService: widget.authService);
+  }
+
+  Future<void> addChild(UserAccess access) async {
+    if (!access.canManageChildren) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keine Berechtigung fuer Kinderanlage.')),
+      );
+      return;
+    }
+
     final firstName = firstNameController.text.trim();
     final lastName = lastNameController.text.trim();
     final birthDate = birthDateController.text.trim();
@@ -39,20 +54,13 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
       return;
     }
 
-    if (currentUser == null) {
-      debugPrint('ChildrenScreen: cannot add child without logged-in user');
-      return;
-    }
+    if (currentUser == null) return;
 
     setState(() => saving = true);
 
     try {
       final parentIds = parentUid.isEmpty ? <String>[] : <String>[parentUid];
       final fullName = '$firstName $lastName';
-
-      debugPrint(
-        'ChildrenScreen: adding child fullName=$fullName, group=$groupName',
-      );
 
       await FirebaseFirestore.instance.collection('children').add({
         'firstName': firstName,
@@ -77,7 +85,7 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
         Navigator.pop(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Kind hinzugefügt')));
+        ).showSnackBar(const SnackBar(content: Text('Kind hinzugefuegt')));
       }
     } catch (error, stackTrace) {
       debugPrint('ChildrenScreen: add child failed: $error');
@@ -89,9 +97,7 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
         ).showSnackBar(SnackBar(content: Text('Fehler: $error')));
       }
     } finally {
-      if (mounted) {
-        setState(() => saving = false);
-      }
+      if (mounted) setState(() => saving = false);
     }
   }
 
@@ -109,14 +115,17 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
           parentUidController: parentUidController,
           notesController: notesController,
           saving: saving,
-          onSave: addChild,
+          onSave: () async {
+            final access = await roleGuardService.loadAccess();
+            if (!mounted || access == null) return;
+            await addChild(access);
+          },
         );
       },
     );
   }
 
-  void openChildProfile(QueryDocumentSnapshot child) {
-    debugPrint('ChildrenScreen: opening child profile childId=${child.id}');
+  void openChildProfile(QueryDocumentSnapshot<Map<String, dynamic>> child) {
     Navigator.push(
       context,
       createPremiumRoute(
@@ -138,89 +147,95 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('ChildrenScreen: loading children stream');
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF7ED),
-      appBar: AppBar(title: const Text('Kinder')),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                colors: [Color(0xFFDBEAFE), Color(0xFFFCE7F3)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.child_care_rounded, color: Color(0xFF2563EB)),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Kinderverwaltung als Basis für Nachrichten, Fotos, Berichte und Entwicklung.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1E293B),
-                    ),
+    return RoleGuard(
+      authService: widget.authService,
+      allowed: (access) => access.isAdmin || access.isTeacher,
+      builder: (context, access) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFFFF7ED),
+          appBar: AppBar(title: const Text('Kinder')),
+          body: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFDBEAFE), Color(0xFFFCE7F3)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('children')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Fehler beim Laden der Kinder'),
-                  );
-                }
+                child: const Row(
+                  children: [
+                    Icon(Icons.child_care_rounded, color: Color(0xFF2563EB)),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Kinderverwaltung als Basis fuer Nachrichten, Fotos, Berichte und Entwicklung.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: access
+                      .scopeCollection(
+                        FirebaseFirestore.instance.collection('children'),
+                      )
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Center(
+                        child: Text('Fehler beim Laden der Kinder'),
+                      );
+                    }
 
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                final children = snapshot.data!.docs;
+                    final children = snapshot.data!.docs;
 
-                if (children.isEmpty) {
-                  return const _EmptyChildrenState();
-                }
+                    if (children.isEmpty) return const _EmptyChildrenState();
 
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  itemCount: children.length,
-                  itemBuilder: (context, index) {
-                    final child = children[index];
-                    final data = child.data() as Map<String, dynamic>;
+                    return ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      itemCount: children.length,
+                      itemBuilder: (context, index) {
+                        final child = children[index];
+                        final data = child.data();
 
-                    return _ChildListTile(
-                      fullName: readString(data, 'fullName'),
-                      groupName: readString(data, 'groupName'),
-                      birthDate: formatBirthDate(data['birthDate']),
-                      onTap: () => openChildProfile(child),
+                        return _ChildListTile(
+                          fullName: readString(data, 'fullName'),
+                          groupName: readString(data, 'groupName'),
+                          birthDate: formatBirthDate(data['birthDate']),
+                          onTap: () => openChildProfile(child),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: openAddChildForm,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Kind hinzufügen'),
-      ),
+          floatingActionButton: access.canManageChildren
+              ? FloatingActionButton.extended(
+                  onPressed: openAddChildForm,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Kind hinzufuegen'),
+                )
+              : null,
+        );
+      },
     );
   }
 }
@@ -269,7 +284,7 @@ class _AddChildSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Kind hinzufügen',
+                'Kind hinzufuegen',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -383,7 +398,7 @@ class _ChildListTile extends StatelessWidget {
           [
             if (groupName.isNotEmpty) groupName,
             if (birthDate.isNotEmpty) birthDate,
-          ].join(' · '),
+          ].join(' - '),
         ),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
@@ -401,7 +416,7 @@ class _EmptyChildrenState extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(28),
         child: Text(
-          'Noch keine Kinder angelegt.',
+          'Noch keine Kinder vorhanden.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Color(0xFF64748B)),
         ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../services/auth_service.dart';
+import '../services/role_guard.dart';
 
 class PhotosScreen extends StatefulWidget {
   final AuthService authService;
@@ -22,8 +23,24 @@ class _PhotosScreenState extends State<PhotosScreen> {
   static const Color _sky = Color(0xFFDDF1FF);
 
   bool uploading = false;
+  late final RoleGuardService roleGuardService;
 
-  Future<void> uploadPhoto() async {
+  @override
+  void initState() {
+    super.initState();
+    roleGuardService = RoleGuardService(authService: widget.authService);
+  }
+
+  Future<void> uploadPhoto(UserAccess access) async {
+    if (!access.canEditContent) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Keine Berechtigung zum Hochladen.')),
+        );
+      }
+      return;
+    }
+
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
@@ -56,6 +73,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
         'imageUrl': imageUrl,
         'title': 'Foto aus der Kita',
         'uploadedBy': uid,
+        ...access.contentScopeFields(),
         'createdAt': Timestamp.now(),
       });
 
@@ -105,78 +123,98 @@ class _PhotosScreenState extends State<PhotosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fotos'),
-        actions: [
-          IconButton(
-            icon: uploading
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.add_a_photo),
-            onPressed: uploading ? null : uploadPhoto,
-          ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('photos')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Fehler beim Laden der Fotos'));
-          }
+    return FutureBuilder<UserAccess?>(
+      future: roleGuardService.loadAccess(),
+      builder: (context, accessSnapshot) {
+        if (accessSnapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        final access = accessSnapshot.data;
+        if (access == null) return const AccessDeniedScreen();
+        final canEdit = access.canEditContent;
 
-          final photos = snapshot.data!.docs;
-
-          if (photos.isEmpty) {
-            return const Center(child: Text('Noch keine Fotos vorhanden.'));
-          }
-
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final crossAxisCount = width >= 1050
-                  ? 4
-                  : width >= 720
-                  ? 3
-                  : width >= 460
-                  ? 2
-                  : 1;
-
-              return GridView.builder(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 18,
-                  mainAxisSpacing: 18,
-                  childAspectRatio: crossAxisCount == 1 ? 0.95 : 0.72,
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Fotos'),
+            actions: [
+              if (canEdit)
+                IconButton(
+                  icon: uploading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add_a_photo),
+                  onPressed: uploading ? null : () => uploadPhoto(access),
                 ),
-                itemCount: photos.length,
-                itemBuilder: (context, index) {
-                  final photo = photos[index];
-                  return _buildPhotoCard(context, photo, index);
+            ],
+          ),
+          body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: access
+                .scopeCollection(
+                  FirebaseFirestore.instance.collection('photos'),
+                  createdByField: 'uploadedBy',
+                )
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return const Center(child: Text('Fehler beim Laden der Fotos'));
+              }
+
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final photos = snapshot.data!.docs;
+
+              if (photos.isEmpty) {
+                return const Center(child: Text('Noch keine Fotos vorhanden.'));
+              }
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final crossAxisCount = width >= 1050
+                      ? 4
+                      : width >= 720
+                      ? 3
+                      : width >= 460
+                      ? 2
+                      : 1;
+
+                  return GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 18,
+                      mainAxisSpacing: 18,
+                      childAspectRatio: crossAxisCount == 1 ? 0.95 : 0.72,
+                    ),
+                    itemCount: photos.length,
+                    itemBuilder: (context, index) {
+                      final photo = photos[index];
+                      return _buildPhotoCard(context, photo, index, canEdit);
+                    },
+                  );
                 },
               );
             },
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildPhotoCard(
     BuildContext context,
-    QueryDocumentSnapshot photo,
+    QueryDocumentSnapshot<Map<String, dynamic>> photo,
     int index,
+    bool canEdit,
   ) {
     final imageUrl = getStringValue(photo, 'imageUrl');
     final title = getStringValue(photo, 'title');
@@ -275,61 +313,64 @@ class _PhotosScreenState extends State<PhotosScreen> {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            _PhotoActionButton(
-                              icon: Icons.edit_note_rounded,
-                              label: 'Bearbeiten',
-                              foreground: const Color(0xFF7C3AED),
-                              background: Colors.white,
-                              onPressed: () {
-                                final descriptionController =
-                                    TextEditingController(
-                                      text: getStringValue(photo, 'caption'),
-                                    );
+                            if (canEdit)
+                              _PhotoActionButton(
+                                icon: Icons.edit_note_rounded,
+                                label: 'Bearbeiten',
+                                foreground: const Color(0xFF7C3AED),
+                                background: Colors.white,
+                                onPressed: () {
+                                  final descriptionController =
+                                      TextEditingController(
+                                        text: getStringValue(photo, 'caption'),
+                                      );
 
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: const Text(
-                                        'Beschreibung bearbeiten',
-                                      ),
-                                      content: TextField(
-                                        controller: descriptionController,
-                                        maxLines: 4,
-                                        decoration: const InputDecoration(
-                                          hintText: 'Beschreibung eingeben...',
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: const Text(
+                                          'Beschreibung bearbeiten',
                                         ),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                          },
-                                          child: const Text('Abbrechen'),
+                                        content: TextField(
+                                          controller: descriptionController,
+                                          maxLines: 4,
+                                          decoration: const InputDecoration(
+                                            hintText:
+                                                'Beschreibung eingeben...',
+                                          ),
                                         ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            await FirebaseFirestore.instance
-                                                .collection('photos')
-                                                .doc(photo.id)
-                                                .update({
-                                                  'caption':
-                                                      descriptionController.text
-                                                          .trim(),
-                                                });
-
-                                            if (context.mounted) {
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () {
                                               Navigator.pop(context);
-                                            }
-                                          },
-                                          child: const Text('Speichern'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                            ),
+                                            },
+                                            child: const Text('Abbrechen'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () async {
+                                              await FirebaseFirestore.instance
+                                                  .collection('photos')
+                                                  .doc(photo.id)
+                                                  .update({
+                                                    'caption':
+                                                        descriptionController
+                                                            .text
+                                                            .trim(),
+                                                  });
+
+                                              if (context.mounted) {
+                                                Navigator.pop(context);
+                                              }
+                                            },
+                                            child: const Text('Speichern'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
                             _PhotoActionButton(
                               icon: Icons.download_rounded,
                               label: 'Download',

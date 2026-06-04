@@ -78,7 +78,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         icon: Icons.assignment_rounded,
         colors: const [Color(0xFFFFE4F1), Color(0xFFFFB8D8)],
         accent: const Color(0xFFDB2777),
-        onTap: () => openFeature(const DailyReportsScreen()),
+        onTap: () =>
+            openFeature(DailyReportsScreen(authService: widget.authService)),
       ),
       _TeacherFeatureData(
         title: 'Wochenmenü bearbeiten',
@@ -86,7 +87,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         icon: Icons.restaurant_menu_rounded,
         colors: const [Color(0xFFFFF1C2), Color(0xFFFFC878)],
         accent: const Color(0xFFF97316),
-        onTap: () => openFeature(const MenuScreen()),
+        onTap: () => openFeature(MenuScreen(authService: widget.authService)),
       ),
       _TeacherFeatureData(
         title: 'Events erstellen',
@@ -94,16 +95,18 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         icon: Icons.event_rounded,
         colors: const [Color(0xFFFFE4EF), Color(0xFFFFA7C8)],
         accent: const Color(0xFFBE185D),
-        onTap: () => openFeature(const EventsScreen()),
+        onTap: () => openFeature(EventsScreen(authService: widget.authService)),
       ),
-      _TeacherFeatureData(
-        title: 'Gruppen',
-        subtitle: 'Kita-Struktur',
-        icon: Icons.groups_rounded,
-        colors: const [Color(0xFFEDE9FE), Color(0xFFC4B5FD)],
-        accent: const Color(0xFF6D28D9),
-        onTap: () => openFeature(const AdminScreen()),
-      ),
+      if (widget.isAdmin)
+        _TeacherFeatureData(
+          title: 'Adminbereich',
+          subtitle: 'Freigaben & Struktur',
+          icon: Icons.admin_panel_settings_rounded,
+          colors: const [Color(0xFFEDE9FE), Color(0xFFC4B5FD)],
+          accent: const Color(0xFF6D28D9),
+          onTap: () =>
+              openFeature(AdminScreen(authService: widget.authService)),
+        ),
     ];
 
     return Scaffold(
@@ -224,9 +227,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             openFeature(PhotosScreen(authService: widget.authService));
           }
           if (index == 3) {
-            openFeature(const AdminScreen());
+            if (widget.isAdmin) {
+              openFeature(AdminScreen(authService: widget.authService));
+            } else {
+              openFeature(ChildrenScreen(authService: widget.authService));
+            }
           }
         },
+        isAdmin: widget.isAdmin,
       ),
     );
   }
@@ -774,10 +782,12 @@ class _DecorativeIcon extends StatelessWidget {
 class _TeacherBottomNavigation extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
+  final bool isAdmin;
 
   const _TeacherBottomNavigation({
     required this.selectedIndex,
     required this.onTap,
+    required this.isAdmin,
   });
 
   @override
@@ -813,22 +823,26 @@ class _TeacherBottomNavigation extends StatelessWidget {
             type: BottomNavigationBarType.fixed,
             elevation: 0,
             onTap: onTap,
-            items: const [
-              BottomNavigationBarItem(
+            items: [
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.home_rounded),
                 label: 'Start',
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.chat_bubble_rounded),
                 label: 'Nachrichten',
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.photo_rounded),
                 label: 'Fotos',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.admin_panel_settings_rounded),
-                label: 'Admin',
+                icon: Icon(
+                  isAdmin
+                      ? Icons.admin_panel_settings_rounded
+                      : Icons.child_care_rounded,
+                ),
+                label: isAdmin ? 'Admin' : 'Kinder',
               ),
             ],
           ),

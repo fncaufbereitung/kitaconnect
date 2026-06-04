@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
+import '../services/role_guard.dart';
+
 class DailyReport {
   final String id;
   final String childName;
@@ -37,7 +40,9 @@ class DailyReport {
 }
 
 class DailyReportsScreen extends StatefulWidget {
-  const DailyReportsScreen({super.key});
+  final AuthService authService;
+
+  const DailyReportsScreen({super.key, required this.authService});
 
   @override
   State<DailyReportsScreen> createState() => _DailyReportsScreenState();
@@ -52,15 +57,25 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
   final notesController = TextEditingController();
 
   bool loading = false;
+  late final RoleGuardService roleGuardService;
 
-  Future<void> addDailyReport() async {
-    if (childNameController.text.trim().isEmpty) {
+  @override
+  void initState() {
+    super.initState();
+    roleGuardService = RoleGuardService(authService: widget.authService);
+  }
+
+  Future<void> addDailyReport(UserAccess access) async {
+    if (!access.canEditContent) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keine Berechtigung fuer Berichte.')),
+      );
       return;
     }
 
-    setState(() {
-      loading = true;
-    });
+    if (childNameController.text.trim().isEmpty) return;
+
+    setState(() => loading = true);
 
     try {
       final today = DateTime.now();
@@ -73,6 +88,7 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
         'sleep': sleepController.text.trim(),
         'activities': activitiesController.text.trim(),
         'notes': notesController.text.trim(),
+        ...access.contentScopeFields(),
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -94,11 +110,9 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
       }
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
-
-    setState(() {
-      loading = false;
-    });
   }
 
   Widget buildInput({
@@ -146,15 +160,15 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
           const SizedBox(height: 4),
           Text(report.date, style: TextStyle(color: Colors.grey.shade600)),
           const SizedBox(height: 14),
-          Text('😊 Stimmung: ${report.mood}'),
+          Text('Stimmung: ${report.mood}'),
           const SizedBox(height: 6),
-          Text('🍽 Essen: ${report.food}'),
+          Text('Essen: ${report.food}'),
           const SizedBox(height: 6),
-          Text('😴 Schlaf: ${report.sleep}'),
+          Text('Schlaf: ${report.sleep}'),
           const SizedBox(height: 6),
-          Text('🎨 Aktivitäten: ${report.activities}'),
+          Text('Aktivitaeten: ${report.activities}'),
           const SizedBox(height: 6),
-          Text('📝 Notizen: ${report.notes}'),
+          Text('Notizen: ${report.notes}'),
         ],
       ),
     );
@@ -173,139 +187,191 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFFF3E0), Color(0xFFE3F2FD), Color(0xFFF3E5F5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text('Tagesberichte'),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
+    return FutureBuilder<UserAccess?>(
+      future: roleGuardService.loadAccess(),
+      builder: (context, accessSnapshot) {
+        if (accessSnapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final access = accessSnapshot.data;
+        if (access == null) return const AccessDeniedScreen();
+        final canEdit = access.canEditContent;
+
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFFF3E0), Color(0xFFE3F2FD), Color(0xFFF3E5F5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              title: const Text('Tagesberichte'),
+              centerTitle: true,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  if (canEdit) ...[
+                    _ReportFormCard(
+                      childNameController: childNameController,
+                      moodController: moodController,
+                      foodController: foodController,
+                      sleepController: sleepController,
+                      activitiesController: activitiesController,
+                      notesController: notesController,
+                      loading: loading,
+                      buildInput: buildInput,
+                      onSave: () => addDailyReport(access),
                     ),
+                    const SizedBox(height: 24),
                   ],
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: access
+                        .scopeCollection(
+                          FirebaseFirestore.instance.collection('dailyReports'),
+                        )
+                        .orderBy('createdAt', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return const Text('Fehler beim Laden der Berichte');
+                      }
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      }
+
+                      final docs = snapshot.data!.docs;
+
+                      if (docs.isEmpty) {
+                        return const Text(
+                          'Noch keine Tagesberichte vorhanden.',
+                          style: TextStyle(fontSize: 16),
+                        );
+                      }
+
+                      return Column(
+                        children: docs.map((doc) {
+                          return buildReportCard(
+                            DailyReport.fromMap(doc.id, doc.data()),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ReportFormCard extends StatelessWidget {
+  final TextEditingController childNameController;
+  final TextEditingController moodController;
+  final TextEditingController foodController;
+  final TextEditingController sleepController;
+  final TextEditingController activitiesController;
+  final TextEditingController notesController;
+  final bool loading;
+  final Widget Function({
+    required String label,
+    required TextEditingController controller,
+    int maxLines,
+  })
+  buildInput;
+  final VoidCallback onSave;
+
+  const _ReportFormCard({
+    required this.childNameController,
+    required this.moodController,
+    required this.foodController,
+    required this.sleepController,
+    required this.activitiesController,
+    required this.notesController,
+    required this.loading,
+    required this.buildInput,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'Neuen Tagesbericht erstellen',
+            style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 18),
+          buildInput(label: 'Name des Kindes', controller: childNameController),
+          const SizedBox(height: 12),
+          buildInput(label: 'Stimmung', controller: moodController),
+          const SizedBox(height: 12),
+          buildInput(label: 'Essen', controller: foodController),
+          const SizedBox(height: 12),
+          buildInput(label: 'Schlaf', controller: sleepController),
+          const SizedBox(height: 12),
+          buildInput(
+            label: 'Aktivitaeten',
+            controller: activitiesController,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          buildInput(
+            label: 'Notizen',
+            controller: notesController,
+            maxLines: 3,
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: loading ? null : onSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7E57C2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Neuen Tagesbericht erstellen',
+              ),
+              child: loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      'Speichern',
                       style: TextStyle(
-                        fontSize: 21,
+                        fontSize: 17,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    buildInput(
-                      label: 'Name des Kindes',
-                      controller: childNameController,
-                    ),
-                    const SizedBox(height: 12),
-                    buildInput(label: 'Stimmung', controller: moodController),
-                    const SizedBox(height: 12),
-                    buildInput(label: 'Essen', controller: foodController),
-                    const SizedBox(height: 12),
-                    buildInput(label: 'Schlaf', controller: sleepController),
-                    const SizedBox(height: 12),
-                    buildInput(
-                      label: 'Aktivitäten',
-                      controller: activitiesController,
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 12),
-                    buildInput(
-                      label: 'Notizen',
-                      controller: notesController,
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: loading ? null : addDailyReport,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7E57C2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: loading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text(
-                                'Speichern',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('dailyReports')
-                    .orderBy('createdAt', descending: true)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return const Text('Fehler beim Laden der Berichte');
-                  }
-
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  }
-
-                  final docs = snapshot.data!.docs;
-
-                  if (docs.isEmpty) {
-                    return const Text(
-                      'Noch keine Tagesberichte vorhanden.',
-                      style: TextStyle(fontSize: 16),
-                    );
-                  }
-
-                  return Column(
-                    children: docs.map((doc) {
-                      final report = DailyReport.fromMap(
-                        doc.id,
-                        doc.data() as Map<String, dynamic>,
-                      );
-
-                      return buildReportCard(report);
-                    }).toList(),
-                  );
-                },
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
