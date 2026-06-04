@@ -15,6 +15,12 @@ class PhotosScreen extends StatefulWidget {
 }
 
 class _PhotosScreenState extends State<PhotosScreen> {
+  static const Color _ink = Color(0xFF334155);
+  static const Color _mutedInk = Color(0xFF64748B);
+  static const Color _peach = Color(0xFFFFE8D6);
+  static const Color _mint = Color(0xFFDFF7EA);
+  static const Color _sky = Color(0xFFDDF1FF);
+
   bool uploading = false;
 
   Future<void> uploadPhoto() async {
@@ -135,154 +141,288 @@ class _PhotosScreenState extends State<PhotosScreen> {
             return const Center(child: Text('Noch keine Fotos vorhanden.'));
           }
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.82,
-            ),
-            itemCount: photos.length,
-            itemBuilder: (context, index) {
-              final photo = photos[index];
-              final imageUrl = getStringValue(photo, 'imageUrl');
-              final title = getStringValue(photo, 'title');
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final crossAxisCount = width >= 1050
+                  ? 4
+                  : width >= 720
+                  ? 3
+                  : width >= 460
+                  ? 2
+                  : 1;
 
-              return Card(
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: imageUrl.isEmpty
-                          ? Container(
-                              color: const Color(0xFFE2E8F0),
-                              child: const Icon(
-                                Icons.image_not_supported,
-                                size: 42,
-                                color: Color(0xFF64748B),
-                              ),
-                            )
-                          : Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: const Color(0xFFE2E8F0),
-                                  child: const Icon(
-                                    Icons.broken_image,
-                                    size: 42,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title.isEmpty ? 'Foto aus der Kita' : title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          Text(
-                            getStringValue(photo, 'caption').isEmpty
-                                ? 'Keine Beschreibung'
-                                : getStringValue(photo, 'caption'),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.black54,
-                            ),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          TextButton.icon(
-                            onPressed: () {
-                              final descriptionController =
-                                  TextEditingController(
-                                    text: getStringValue(photo, 'caption'),
-                                  );
-
-                              showDialog(
-                                context: context,
-                                builder: (context) {
-                                  return AlertDialog(
-                                    title: const Text(
-                                      'Beschreibung bearbeiten',
-                                    ),
-                                    content: TextField(
-                                      controller: descriptionController,
-                                      maxLines: 4,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Beschreibung eingeben...',
-                                      ),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                        },
-                                        child: const Text('Abbrechen'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () async {
-                                          await FirebaseFirestore.instance
-                                              .collection('photos')
-                                              .doc(photo.id)
-                                              .update({
-                                                'caption': descriptionController
-                                                    .text
-                                                    .trim(),
-                                              });
-
-                                          if (context.mounted) {
-                                            Navigator.pop(context);
-                                          }
-                                        },
-                                        child: const Text('Speichern'),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                            icon: const Icon(Icons.edit_note),
-                            label: const Text('Beschreibung hinzufügen'),
-                          ),
-
-                          TextButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Download-Funktion wird als nächstes aktiviert',
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.download),
-                            label: const Text('Download'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              return GridView.builder(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 18,
+                  mainAxisSpacing: 18,
+                  childAspectRatio: crossAxisCount == 1 ? 0.95 : 0.72,
                 ),
+                itemCount: photos.length,
+                itemBuilder: (context, index) {
+                  final photo = photos[index];
+                  return _buildPhotoCard(context, photo, index);
+                },
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildPhotoCard(
+    BuildContext context,
+    QueryDocumentSnapshot photo,
+    int index,
+  ) {
+    final imageUrl = getStringValue(photo, 'imageUrl');
+    final title = getStringValue(photo, 'title');
+    final caption = getStringValue(photo, 'caption');
+    final gradientColors = _cardGradient(index);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.last.withValues(alpha: 0.34),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradientColors,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 7,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(color: Colors.white),
+                      child: imageUrl.isEmpty
+                          ? const _PhotoPlaceholder(
+                              icon: Icons.image_not_supported_rounded,
+                            )
+                          : Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const _PhotoPlaceholder(
+                                      icon: Icons.photo_rounded,
+                                      showProgress: true,
+                                    );
+                                  },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const _PhotoPlaceholder(
+                                  icon: Icons.broken_image_rounded,
+                                );
+                              },
+                            ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 5,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 12, 6, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title.isEmpty ? 'Foto aus der Kita' : title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            height: 1.15,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Expanded(
+                          child: Text(
+                            caption.isEmpty ? 'Keine Beschreibung' : caption,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: _mutedInk,
+                              fontSize: 13,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _PhotoActionButton(
+                              icon: Icons.edit_note_rounded,
+                              label: 'Bearbeiten',
+                              foreground: const Color(0xFF7C3AED),
+                              background: Colors.white,
+                              onPressed: () {
+                                final descriptionController =
+                                    TextEditingController(
+                                      text: getStringValue(photo, 'caption'),
+                                    );
+
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: const Text(
+                                        'Beschreibung bearbeiten',
+                                      ),
+                                      content: TextField(
+                                        controller: descriptionController,
+                                        maxLines: 4,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Beschreibung eingeben...',
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          child: const Text('Abbrechen'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () async {
+                                            await FirebaseFirestore.instance
+                                                .collection('photos')
+                                                .doc(photo.id)
+                                                .update({
+                                                  'caption':
+                                                      descriptionController.text
+                                                          .trim(),
+                                                });
+
+                                            if (context.mounted) {
+                                              Navigator.pop(context);
+                                            }
+                                          },
+                                          child: const Text('Speichern'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                            _PhotoActionButton(
+                              icon: Icons.download_rounded,
+                              label: 'Download',
+                              foreground: const Color(0xFF0284C7),
+                              background: Colors.white.withValues(alpha: 0.82),
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Download-Funktion wird als nächstes aktiviert',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Color> _cardGradient(int index) {
+    const gradients = [
+      [Color(0xFFFFF6E7), _peach],
+      [Color(0xFFF0FFF8), _mint],
+      [Color(0xFFF1F8FF), _sky],
+      [Color(0xFFFFF2F7), Color(0xFFFFDCEB)],
+    ];
+
+    return gradients[index % gradients.length];
+  }
+}
+
+class _PhotoPlaceholder extends StatelessWidget {
+  final IconData icon;
+  final bool showProgress;
+
+  const _PhotoPlaceholder({required this.icon, this.showProgress = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFF8FAFC),
+      child: Center(
+        child: showProgress
+            ? const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              )
+            : Icon(icon, size: 46, color: const Color(0xFF94A3B8)),
+      ),
+    );
+  }
+}
+
+class _PhotoActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color foreground;
+  final Color background;
+  final VoidCallback onPressed;
+
+  const _PhotoActionButton({
+    required this.icon,
+    required this.label,
+    required this.foreground,
+    required this.background,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
+      style: FilledButton.styleFrom(
+        backgroundColor: background,
+        foregroundColor: foreground,
+        elevation: 0,
+        minimumSize: const Size(0, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }
