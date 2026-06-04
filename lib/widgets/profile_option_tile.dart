@@ -77,4 +77,3 @@ class ProfileOptionTile extends StatelessWidget {
     );
   }
 }
-

@@ -310,4 +310,3 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
     );
   }
 }
-
