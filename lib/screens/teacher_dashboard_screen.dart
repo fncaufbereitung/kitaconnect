@@ -48,8 +48,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     final areaTitle = widget.isAdmin ? 'Adminbereich' : 'Erzieherbereich';
     final featureCards = [
       _TeacherFeatureData(
-        title: 'Kinder',
-        subtitle: 'Profile & Gruppen',
+        title: widget.isAdmin ? 'Kinderverwaltung' : 'Kinder',
+        subtitle: widget.isAdmin ? 'Kinder verwalten' : 'Profile & Gruppen',
         icon: Icons.child_care_rounded,
         colors: const [Color(0xFFF0E4FF), Color(0xFFDCC7FF)],
         accent: const Color(0xFF8B5CF6),

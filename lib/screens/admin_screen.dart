@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../services/role_guard.dart';
+import 'children_screen.dart';
+import 'dashboard_screen.dart' show createPremiumRoute;
+import 'events_screen.dart';
 import 'menu_screen.dart';
+import 'messages_screen.dart';
+import 'photos_screen.dart';
 
 class AdminScreen extends StatelessWidget {
   final AuthService authService;
@@ -109,6 +114,8 @@ class _AdminContentState extends State<_AdminContent> {
                 },
               ),
             ),
+            const SizedBox(height: 14),
+            _AdminShortcutGrid(authService: widget.authService),
             const SizedBox(height: 24),
             const _PendingUserApprovalsSection(),
             const SizedBox(height: 24),
@@ -198,6 +205,134 @@ class _AdminContentState extends State<_AdminContent> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminShortcutGrid extends StatelessWidget {
+  final AuthService authService;
+
+  const _AdminShortcutGrid({required this.authService});
+
+  void open(BuildContext context, Widget screen) {
+    Navigator.push(context, createPremiumRoute(screen));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shortcuts = [
+      _AdminShortcut(
+        title: 'Kinderverwaltung',
+        icon: Icons.child_care_rounded,
+        color: const Color(0xFF7C3AED),
+        onTap: () => open(context, ChildrenScreen(authService: authService)),
+      ),
+      _AdminShortcut(
+        title: 'Gruppenverwaltung',
+        icon: Icons.groups_rounded,
+        color: const Color(0xFF059669),
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gruppenverwaltung ist auf dieser Seite.'),
+            ),
+          );
+        },
+      ),
+      _AdminShortcut(
+        title: 'Wochenmenue',
+        icon: Icons.restaurant_menu_rounded,
+        color: const Color(0xFFF97316),
+        onTap: () => open(context, MenuScreen(authService: authService)),
+      ),
+      _AdminShortcut(
+        title: 'Termine',
+        icon: Icons.event_rounded,
+        color: const Color(0xFFDB2777),
+        onTap: () => open(context, EventsScreen(authService: authService)),
+      ),
+      _AdminShortcut(
+        title: 'Nachrichten',
+        icon: Icons.chat_bubble_rounded,
+        color: const Color(0xFF0284C7),
+        onTap: () => open(context, MessagesScreen(authService: authService)),
+      ),
+      _AdminShortcut(
+        title: 'Kinderportfolio',
+        icon: Icons.auto_stories_rounded,
+        color: const Color(0xFF8B5CF6),
+        onTap: () => open(context, PhotosScreen(authService: authService)),
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: shortcuts.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 2.4,
+      ),
+      itemBuilder: (context, index) {
+        return _AdminShortcutButton(shortcut: shortcuts[index]);
+      },
+    );
+  }
+}
+
+class _AdminShortcut {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AdminShortcut({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+}
+
+class _AdminShortcutButton extends StatelessWidget {
+  final _AdminShortcut shortcut;
+
+  const _AdminShortcutButton({required this.shortcut});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: shortcut.onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: shortcut.color.withValues(alpha: 0.11),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            children: [
+              Icon(shortcut.icon, color: shortcut.color),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  shortcut.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: shortcut.color,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

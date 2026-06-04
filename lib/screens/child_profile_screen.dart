@@ -184,6 +184,12 @@ class _TopLevelChildProfile extends StatelessWidget {
                 final notes = readString(data, 'notes');
                 final parentIds = readParentIds(data['parentIds']);
                 final canSeeParentIds = access.isAdmin || access.isTeacher;
+                final canManagePickupPersons =
+                    access.isAdmin || access.isTeacher;
+                final pickupPersons = readPickupPersons(
+                  data['pickupPersons'],
+                  approvedOnly: access.isParent,
+                );
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 92, 20, 28),
@@ -242,6 +248,12 @@ class _TopLevelChildProfile extends StatelessWidget {
                             ),
                           _InfoRow(label: 'Notizen', value: notes),
                         ],
+                      ),
+                      const SizedBox(height: 18),
+                      _PickupPersonsSection(
+                        childId: childId,
+                        pickupPersons: pickupPersons,
+                        canManage: canManagePickupPersons,
                       ),
                       const SizedBox(height: 22),
                       const Text(
@@ -847,6 +859,442 @@ class _PremiumTextField extends StatelessWidget {
   }
 }
 
+class _PickupPersonsSection extends StatelessWidget {
+  final String childId;
+  final List<PickupPerson> pickupPersons;
+  final bool canManage;
+
+  const _PickupPersonsSection({
+    required this.childId,
+    required this.pickupPersons,
+    required this.canManage,
+  });
+
+  Future<void> openEditor(
+    BuildContext context, {
+    PickupPerson? pickupPerson,
+  }) async {
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _PickupPersonSheet(
+          childId: childId,
+          pickupPersons: pickupPersons,
+          pickupPerson: pickupPerson,
+        );
+      },
+    );
+
+    if (changed == true && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gespeichert')));
+    }
+  }
+
+  Future<void> deletePickupPerson(
+    BuildContext context,
+    PickupPerson pickupPerson,
+  ) async {
+    final updated = pickupPersons
+        .where((person) => person.id != pickupPerson.id)
+        .map((person) => person.toFirestore())
+        .toList();
+
+    await FirebaseFirestore.instance.collection('children').doc(childId).update(
+      {'pickupPersons': updated, 'updatedAt': FieldValue.serverTimestamp()},
+    );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Geloescht')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.90)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF94A3B8).withValues(alpha: 0.16),
+            blurRadius: 24,
+            offset: const Offset(0, 13),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: _green.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.verified_user_rounded, color: _green),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Abholberechtigte Personen',
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w900,
+                    color: _ink,
+                  ),
+                ),
+              ),
+              if (canManage)
+                IconButton.filledTonal(
+                  onPressed: () => openEditor(context),
+                  icon: const Icon(Icons.add_rounded),
+                  tooltip: 'Person hinzufuegen',
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (pickupPersons.isEmpty)
+            const _EmptyPickupPersonsState()
+          else
+            for (final person in pickupPersons)
+              _PickupPersonTile(
+                pickupPerson: person,
+                canManage: canManage,
+                onEdit: () => openEditor(context, pickupPerson: person),
+                onDelete: () => deletePickupPerson(context, person),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickupPersonTile extends StatelessWidget {
+  final PickupPerson pickupPerson;
+  final bool canManage;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _PickupPersonTile({
+    required this.pickupPerson,
+    required this.canManage,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFFDFF7EA), _sky]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.person_rounded, color: _green),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pickupPerson.name,
+                  style: const TextStyle(
+                    color: _ink,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  [
+                    pickupPerson.relation,
+                    if (pickupPerson.phone.isNotEmpty) pickupPerson.phone,
+                  ].where((item) => item.isNotEmpty).join(' - '),
+                  style: const TextStyle(
+                    color: _mutedInk,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (pickupPerson.note.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    pickupPerson.note,
+                    style: const TextStyle(color: _mutedInk),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (canManage)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'edit') onEdit();
+                if (value == 'delete') onDelete();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'edit', child: Text('Bearbeiten')),
+                PopupMenuItem(value: 'delete', child: Text('Loeschen')),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickupPersonSheet extends StatefulWidget {
+  final String childId;
+  final List<PickupPerson> pickupPersons;
+  final PickupPerson? pickupPerson;
+
+  const _PickupPersonSheet({
+    required this.childId,
+    required this.pickupPersons,
+    this.pickupPerson,
+  });
+
+  @override
+  State<_PickupPersonSheet> createState() => _PickupPersonSheetState();
+}
+
+class _PickupPersonSheetState extends State<_PickupPersonSheet> {
+  final nameController = TextEditingController();
+  final relationController = TextEditingController();
+  final phoneController = TextEditingController();
+  final noteController = TextEditingController();
+  bool saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final person = widget.pickupPerson;
+    if (person == null) return;
+    nameController.text = person.name;
+    relationController.text = person.relation;
+    phoneController.text = person.phone;
+    noteController.text = person.note;
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    relationController.dispose();
+    phoneController.dispose();
+    noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> save() async {
+    final name = nameController.text.trim();
+    final relation = relationController.text.trim();
+
+    if (name.isEmpty || relation.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bitte Name und Beziehung eingeben.')),
+      );
+      return;
+    }
+
+    setState(() => saving = true);
+
+    try {
+      final existing = widget.pickupPerson;
+      final newPerson = PickupPerson(
+        id: existing?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+        name: name,
+        relation: relation,
+        phone: phoneController.text.trim(),
+        note: noteController.text.trim(),
+        approved: true,
+        createdAt: existing?.createdAt ?? Timestamp.now(),
+      );
+
+      final updated = [
+        for (final person in widget.pickupPersons)
+          if (person.id == newPerson.id) newPerson else person,
+        if (existing == null) newPerson,
+      ].map((person) => person.toFirestore()).toList();
+
+      await FirebaseFirestore.instance
+          .collection('children')
+          .doc(widget.childId)
+          .update({
+            'pickupPersons': updated,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fehler: $error')));
+      }
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+      ),
+      margin: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.pickupPerson == null
+                    ? 'Abholberechtigte Person hinzufügen'
+                    : 'Abholberechtigte Person bearbeiten',
+                style: const TextStyle(
+                  color: _ink,
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 18),
+              _PickupPersonField(controller: nameController, label: 'Name'),
+              _PickupPersonField(
+                controller: relationController,
+                label: 'Beziehung zum Kind',
+              ),
+              _PickupPersonField(
+                controller: phoneController,
+                label: 'Telefonnummer optional',
+                keyboardType: TextInputType.phone,
+              ),
+              _PickupPersonField(
+                controller: noteController,
+                label: 'Hinweis optional',
+                maxLines: 3,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: FilledButton.icon(
+                  onPressed: saving ? null : save,
+                  icon: saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.save_rounded),
+                  label: const Text('Speichern'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _purple,
+                    foregroundColor: Colors.white,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PickupPersonField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final int maxLines;
+  final TextInputType? keyboardType;
+
+  const _PickupPersonField({
+    required this.controller,
+    required this.label,
+    this.maxLines = 1,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: const Color(0xFFF8FAFC),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyPickupPersonsState extends StatelessWidget {
+  const _EmptyPickupPersonsState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Text(
+        'Keine Abholberechtigten eingetragen',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: _mutedInk, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
 class _PlaceholderSection extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -966,9 +1414,74 @@ class _DecorativeIcon extends StatelessWidget {
   }
 }
 
+class PickupPerson {
+  final String id;
+  final String name;
+  final String relation;
+  final String phone;
+  final String note;
+  final bool approved;
+  final Timestamp createdAt;
+
+  const PickupPerson({
+    required this.id,
+    required this.name,
+    required this.relation,
+    required this.phone,
+    required this.note,
+    required this.approved,
+    required this.createdAt,
+  });
+
+  factory PickupPerson.fromMap(Map<String, dynamic> data) {
+    final createdAt = data['createdAt'];
+    return PickupPerson(
+      id: readString(data, 'id').isEmpty
+          ? DateTime.now().microsecondsSinceEpoch.toString()
+          : readString(data, 'id'),
+      name: readString(data, 'name'),
+      relation: readString(data, 'relation'),
+      phone: readString(data, 'phone'),
+      note: readString(data, 'note'),
+      approved: data['approved'] is bool ? data['approved'] as bool : true,
+      createdAt: createdAt is Timestamp ? createdAt : Timestamp.now(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'name': name,
+      'relation': relation,
+      'phone': phone,
+      'note': note,
+      'approved': approved,
+      'createdAt': createdAt,
+    };
+  }
+}
+
 String readString(Map<String, dynamic> data, String key) {
   final value = data[key];
   return value == null ? '' : value.toString();
+}
+
+List<PickupPerson> readPickupPersons(
+  dynamic value, {
+  required bool approvedOnly,
+}) {
+  if (value is! Iterable) return const [];
+
+  return value
+      .whereType<Map>()
+      .map(
+        (item) => PickupPerson.fromMap(
+          item.map((key, value) => MapEntry(key.toString(), value)),
+        ),
+      )
+      .where((person) => person.name.isNotEmpty)
+      .where((person) => !approvedOnly || person.approved)
+      .toList();
 }
 
 List<String> readParentIds(dynamic value) {
